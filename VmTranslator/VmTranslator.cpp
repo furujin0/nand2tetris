@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 #include "VmTranslator.hpp"
 
 ArithmeticType toArithmeticType(const std::string& op) {
@@ -33,48 +34,43 @@ std::string SegTypeToAsmSymbol(SegType seg) {
 	return symbol;
 }
 
-Parser::Parser(const std::string& filename):_ifs(filename + ".vm") {};
+Parser::Parser(const std::string& path){
+	_ifs.open(path);
+}
 
 bool Parser::hasMoreCommands() {
 	return !_ifs.eof();
 }
 
 void Parser::advance() {
-	std::getline(_ifs, _line);
 	bool is_command = true;
-
-	//skip comment
+	std::getline(_ifs, _line);
 	auto pos = _line.find("//");
 	if (pos != decltype(_line)::npos) {
-		is_command = false;
+		_line.erase(_line.begin() + pos, _line.end());
 	}
-
-	//reduce spaces
 	for (auto itr_beg = _line.begin(); itr_beg != _line.end(); itr_beg++) {
-		if (*itr_beg = ' ') {
+		if (*itr_beg == ' ') {
 			auto itr_end = itr_beg;
-			while (itr_end != _line.end() || *itr_end != ' ') {
+			while (itr_end != _line.end() && *itr_end == ' ') {
 				itr_end++;
 			}
 			_line.replace(itr_beg, itr_end, " ");
 		}
 	}
-	//erase spaces before command
-	if (_line.find(' ') == 0) {
-		_line.erase(_line.begin());
+	if (!_line.empty() && _line.find(' ') == 0) {
+		_line.erase(_line.begin(), _line.begin() + 1);
 	}
-	if (_line.find(' ') == _line.size() - 1)
-	{
-		_line.erase(_line.end() - 1);
+	if (!_line.empty() && _line.find(' ') == _line.size() - 1) {
+		_line.erase(_line.end() - 1, _line.end());
 	}
-
-	if (_line.empty()) {
-		is_command = false;
-	}
-
-	if (!is_command) {
+	if (_line.empty() && hasMoreCommands()) {
 		advance();
 	}
+}
+
+std::string Parser::currentCommand() {
+	return _line;
 }
 
 CmdType Parser::commandType()
@@ -108,6 +104,7 @@ CmdType Parser::commandType()
 	else if (_line.find("return") == 0) {
 		return CmdType::C_RETURN;
 	}
+	return CmdType::C_INVALID;
 }
 
 std::string Parser::arg1() {
@@ -166,16 +163,21 @@ void CodeWriter::writeArithmeticOneOp(const std::string& cmd) {
 	switch (ArithmeticCmdDict.at(cmd))
 	{
 	case ArithmeticType::NEG:
-		op = "-";
+		op = "-"; break;
 	case ArithmeticType::NOT:
-		op = "!";
+		op = "!"; break;
 	default:
 		break;
 	}
 	_ofs
 		<< "@SP" << std::endl
-		<< "M=" << op << "M" << std::endl;
-	_asm_next_line += 2;
+		<< "M=M-1" << std::endl //decrement SP
+		<< "A=M" << std::endl //get address of the topmost element
+		<< "M=" << op << "M" << std::endl //execute operation
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl; //increment SP
+
+	_asm_next_line += 6;
 }
 
 void CodeWriter::writeArithmeticTwoOp(const std::string& cmd) {
@@ -183,32 +185,36 @@ void CodeWriter::writeArithmeticTwoOp(const std::string& cmd) {
 	switch (ArithmeticCmdDict.at(cmd))
 	{
 	case ArithmeticType::ADD:
-		op = "+";
+		op = "+"; break;
 	case ArithmeticType::SUB:
-		op = "-";
+		op = "-"; break;
 	case ArithmeticType::AND:
-		op = "&";
+		op = "&"; break;
 	case ArithmeticType::OR:
-		op = "|";
+		op = "|"; break;
 	default:
 		break;
 	}
 
 	_ofs
 		<< "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
 		<< "D=M" << std::endl
-		<< "A=A-1" << std::endl
-		<< "M=D" << op << "M" << std::endl
-		<< "@0" << std::endl
-		<< "M=A" << std::endl; //update stack pointer
+		<< "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "M=M" << op << "D" << std::endl
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl;
 
-	_asm_next_line += 6;
+	_asm_next_line += 10;
 }
 
 void CodeWriter::writeArithmeticCompare(const std::string& cmd) {
-	int set_true_line = _asm_next_line + 10;
-	int set_false_line = _asm_next_line + 14;
-	int return_value_line = _asm_next_line + 19;
+	int set_true_line = _asm_next_line + 12;
+	int set_false_line = _asm_next_line + 16;
+	int return_value_line = _asm_next_line + 20;
 
 	std::string opJump;
 	if (cmd == "eq") 
@@ -220,26 +226,31 @@ void CodeWriter::writeArithmeticCompare(const std::string& cmd) {
 
 	_ofs
 		<< "@SP" << std::endl
-		<< "D=A" << std::endl
-		<< "A=A-1" << std::endl
-		<< "@0" << std::endl
-		<< "M=A" << std::endl // update stack pointer
-		<< "D=D-M" << std::endl
+		<< "M=M-1" << std::endl // decrement SP, now it has the address of y
+		<< "A=M" << std::endl // get address of y
+		<< "D=M" << std::endl // get y
+		<< "@SP" << std::endl
+		<< "M=M-1" << std::endl // decrement SP, now it has the address of x
+		<< "A=M" << std::endl // get address of y 
+		<< "D=D-M" << std::endl //put y-x to D
 		<< "@" << set_true_line << std::endl
 		<< "D;" << opJump << std::endl
 		<< "@" << set_false_line << std::endl
 		<< "0;JMP" << std::endl
-		<< "@65535" << std::endl
-		<< "D=A" << std::endl
+		<< "@0" << std::endl
+		<< "D=!A" << std::endl //put 'true' to D
 		<< "@" << return_value_line << std::endl
 		<< "0;JMP" << std::endl
 		<< "@0" << std::endl
-		<< "D=A" << std::endl
+		<< "D=A" << std::endl // put 'false' to D
 		<< "@" << return_value_line << std::endl
 		<< "0;JMP" << std::endl
 		<< "@SP" << std::endl
-		<< "M=D" << std::endl;
-	_asm_next_line += 20;
+		<< "A=M" << std::endl // get the address of return value
+		<< "M=D" << std::endl
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl; //increment SP
+	_asm_next_line += 25;
 }
 
 void CodeWriter::writeArithmeticAdd() {
@@ -280,61 +291,103 @@ void CodeWriter::writeArithmeticNot() {
 
 void CodeWriter::writePushPop(CmdType cmd, const std::string& seg, int idx) {
 
-	auto seg_type = SegDict.at(seg);
-
 	switch (cmd) {
 	case CmdType::C_PUSH:
-		switch (seg_type) {
-		case SegType::CONST:
-			writePushConst(idx);
-			break;
-		case SegType::STATIC:
-			writePushStatic(idx);
-			break;
-		default:
-			writePopNonStatic(seg_type, idx);
-			break;
-		}
+		writePush(seg, idx);
 		break;
-
 	case CmdType::C_POP:
-		switch(seg_type){
-		case SegType::CONST:
-			writePopConst();
-			break;
-		case SegType::STATIC:
-			writePopStatic(idx);
-			break;
-		default:
-			writePopNonStatic(seg_type, idx);
-			break;
-		}
+		writePop(seg, idx);
 		break;
+	default:
+		break;
+	}
+}
+
+void CodeWriter::writePush(const std::string& seg, int idx) {
+	auto seg_type = SegDict.at(seg);
+	switch (seg_type) {
+	case SegType::CONST:
+		writePushConst(idx); break;
+	case SegType::STATIC:
+		writePushStatic(idx); break;
+	case SegType::POINTER:
+		writePushPointer(idx); break;
+	case SegType::TEMP:
+		writePushTemp(idx); break;
+	default:
+		writePushNonStatic(seg_type, idx); break;
+	}
+}
+
+void CodeWriter::writePop(const std::string& seg, int idx) {
+	auto seg_type = SegDict.at(seg);
+	switch (seg_type) {
+	case SegType::CONST:
+		writePopConst(); break;
+	case SegType::STATIC:
+		writePopStatic(idx); break;
+	case SegType::POINTER:
+		writePopPointer(idx); break;
+	case SegType::TEMP:
+		writePopTemp(idx); break;
+	default:
+		writePopNonStatic(seg_type, idx); break;
 	}
 }
 
 void CodeWriter::writePushNonStatic(SegType seg_type, int idx) {
 	std::string segment = SegTypeToAsmSymbol(seg_type);
 	_ofs << "@" << segment << std::endl
-		<< "D=A" << std::endl
+		<< "D=M" << std::endl // get the address of segment[0]
 		<< "@" << idx << std::endl
-		<< "A=D+A" << std::endl
-		<< "D=M" << std::endl
+		<< "A=D+A" << std::endl // get the address of segment[idx]
+		<< "D=M" << std::endl // get the value of segment[idx]
 		<< "@SP" << std::endl
-		<< "A=A+1" << std::endl
-		<< "M=D" << std::endl;
-	_asm_next_line += 8;
+		<< "A=M" << std::endl // get the address to put the value
+		<< "M=D" << std::endl
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl;
+	;
+	_asm_next_line += 10;
+}
+
+void CodeWriter::writePushTemp(int idx) {
+	_ofs 
+		<< "@" << idx + 5 << std::endl
+		<< "D=M" << std::endl // get the value of segment[idx]
+		<< "@SP" << std::endl
+		<< "A=M" << std::endl // get the address to put the value
+		<< "M=D" << std::endl
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl;
+	_asm_next_line += 7;
+}
+
+void CodeWriter::writePushPointer(int idx) {
+	_ofs
+		<< "@" << idx + 3 << std::endl
+		<< "D=M" << std::endl // get the value of segment[idx]
+		<< "@SP" << std::endl
+		<< "A=M" << std::endl // get the address to put the value
+		<< "M=D" << std::endl
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl;
+	;
+	_asm_next_line += 7;
+
 }
 
 void CodeWriter::writePushStatic(int idx) {
 	_ofs
 		<< "@" << _filename << "." << idx << std::endl
-		<< "D-A" << std::endl
+		<< "D=M" << std::endl // get static object
+		<< "@SP" << std::endl //
+		<< "A=M" << std::endl // get the address to put the value
+		<< "M=D" << std::endl
 		<< "@SP" << std::endl
-		<< "A=A+1" << std::endl
-		<< "M=D" << std::endl;
+		<< "M=M+1" << std::endl;
 
-	_asm_next_line += 5;
+	_asm_next_line += 7;
 }
 
 void CodeWriter::writePushConst(int value) {
@@ -342,45 +395,69 @@ void CodeWriter::writePushConst(int value) {
 		<< "@" << value << std::endl
 		<< "D=A" << std::endl
 		<< "@SP" << std::endl
-		<< "A=A+1" << std::endl
-		<< "M=D" << std::endl;
+		<< "A=M" << std::endl
+		<< "M=D" << std::endl
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl;
 
-	_asm_next_line += 5;
+	_asm_next_line += 7;
 }
 
 void CodeWriter::writePopNonStatic(SegType seg_type, int idx) {
 	std::string segment = SegTypeToAsmSymbol(seg_type);
 	_ofs << "@" << segment << std::endl
-		<< "D=M" << std::endl
+		<< "D=M" << std::endl //get the address of segment[0]
 		<< "@" << idx << std::endl
-		<< "A=D+A" << std::endl
-		<< "@R13" << std::endl
-		<< "M=A" << std::endl
+		<< "D=D+A" << std::endl //get the address of segment[idx]
+		<< "@R13" << std::endl // store the address of segment[idx] ot R13
+		<< "M=D" << std::endl
 		<< "@SP" << std::endl
-		<< "D=M" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl //get the topmost value of the stack
 		<< "@R13" << std::endl
 		<< "A=M" << std::endl
-		<< "M=D" << std::endl
-		<< "@0" << std::endl
-		<< "M=M-1" << std::endl;
+		<< "M=D" << std::endl; //set the popped value
 	_asm_next_line += 13;
+}
+
+void CodeWriter::writePopTemp(int idx) {
+	_ofs
+		<< "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl //get the topmost value of the stack
+		<< "@" << idx + 5 << std::endl
+		<< "M=D" << std::endl; //set the popped value
+	_asm_next_line += 6;
+}
+
+void CodeWriter::writePopPointer(int idx) {
+	_ofs 
+		<< "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl //get the topmost value of the stack
+		<< "@" << idx + 3 << std::endl
+		<< "M=D" << std::endl; //set the popped value
+	_asm_next_line += 6;
 }
 
 void CodeWriter::writePopStatic(int idx)
 {
 	_ofs
 		<< "@SP" << std::endl
-		<< "D=M" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl // get the topmost value of the stack
 		<< "@" << _filename << "." << idx << std::endl
-		<< "M=D" << std::endl
-		<< "@0" << std::endl
-		<< "M=M-1" << std::endl;
+		<< "M=D" << std::endl; //set the value to the static object
 
 	_asm_next_line += 6;
 }
 
 void CodeWriter::writePopConst() {
-	_ofs << "@0" << std::endl
+	_ofs << "@SP" << std::endl
 		<< "M=M-1" << std::endl;
 	_asm_next_line += 2;
 }

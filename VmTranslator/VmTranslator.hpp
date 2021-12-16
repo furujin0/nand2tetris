@@ -14,7 +14,8 @@ enum class CmdType {
 	C_IF,
 	C_FUNCTION,
 	C_RETURN,
-	C_CALL
+	C_CALL,
+	C_INVALID
 };
 
 enum class SegType {
@@ -68,13 +69,14 @@ ArithmeticType toArithmeticType(const std::string& op);
 
 std::string SegTypeToAsmSymbol(SegType seg);
 
+
 class Parser {
 private:
 	std::string _line;
 	std::ifstream _ifs;
 	
 public:
-	Parser(const std::string& filename);
+	Parser(const std::string& path);
 
 	bool hasMoreCommands();
 
@@ -86,6 +88,7 @@ public:
 
 	int arg2();
 
+	std::string currentCommand();
 };
 
 class CodeWriter {
@@ -102,6 +105,10 @@ public:
 	void writeArithmetic(const std::string& cmd);
 
 	void writePushPop(CmdType cmd, const std::string& seg, int idx);
+
+	void writePush(const std::string& seg, int idx);
+
+	void writePop(const std::string& seg, int idx);
 
 	void close();
 
@@ -131,11 +138,19 @@ public:
 
 	void writePushNonStatic(SegType seg_type, int idx);
 	
+	void writePushTemp(int idx);
+
+	void writePushPointer(int idx);
+
 	void writePushStatic(int idx);
 
 	void writePushConst(int value);
 
 	void writePopNonStatic(SegType seg_type, int idx);
+
+	void writePopTemp(int idx);
+
+	void writePopPointer(int idx);
 
 	void writePopStatic(int idx);
 
