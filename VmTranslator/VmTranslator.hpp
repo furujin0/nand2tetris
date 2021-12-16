@@ -57,11 +57,43 @@ const std::unordered_map<std::string, SegType> SegDict{
 	std::make_pair("argument", SegType::ARG),
 	std::make_pair("local", SegType::LCL),
 	std::make_pair("static", SegType::STATIC),
-	std::make_pair("this", SegType::THIS)
+	std::make_pair("this", SegType::THIS),
+	std::make_pair("that", SegType::THAT),
+	std::make_pair("pointer", SegType::POINTER),
+	std::make_pair("temp", SegType::TEMP),
+	std::make_pair("constant", SegType::CONST)
 };
 
 ArithmeticType toArithmeticType(const std::string& op) {
 	return ArithmeticCmdDict.at(op);
+}
+
+std::string SegTypeToAsmSymbol(SegType seg) {
+	std::string symbol;
+	switch (seg)
+	{
+	case SegType::ARG:
+		symbol = "ARG";
+		break;
+	case SegType::LCL:
+		symbol = "LCL";
+		break;
+	case SegType::THIS:
+		symbol = "THIS";
+		break;
+	case SegType::THAT:
+		symbol = "THAT";
+		break;
+	case SegType::POINTER:
+		symbol = "3";
+		break;
+	case SegType::TEMP:
+		symbol = "5";
+		break;
+	default:
+		break;
+	}
+	return symbol;
 }
 
 class Parser {
@@ -88,6 +120,7 @@ class CodeWriter {
 private:
 	std::ofstream _ofs;
 	int _asm_next_line = 0;
+	std::string _filename;
 
 public:
 	CodeWriter();
@@ -107,7 +140,7 @@ public:
 	void writeArithmeticTwoOp(const std::string& cmd);
 
 	void writeArithmeticNeg();
-		
+
 	void writeArithmeticNot();
 
 	void writeArithmeticAdd();
@@ -123,4 +156,21 @@ public:
 	void writeArithmeticGt();
 
 	void writeArithmeticLt();
+
+	void writePush(SegType seg, int idx);
+
+	void writePop(SegType seg, int idx);
+
+	void writePushNonStatic(SegType seg_type, int idx);
+	
+	void writePushStatic(int idx);
+
+	void writePushConst(int value);
+
+	void writePopNonStatic(SegType seg_type, int idx);
+
+	void writePopStatic(int idx);
+
+	void writePopConst();
+
 };

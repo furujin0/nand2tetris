@@ -99,6 +99,7 @@ CodeWriter::CodeWriter(){}
 
 void CodeWriter::setFileName(const std::string& filename) {
 	_ofs = std::ofstream(filename + ".asm");
+	_filename = filename;
 }
 
 
@@ -119,7 +120,7 @@ void CodeWriter::writeArithmetic(const std::string& cmd) {
 	case ArithmeticType::AND:
 		writeArithmeticAnd(); break;
 	case ArithmeticType::OR:
-		writeArithmeticOr();
+		writeArithmeticOr(); break;
 	case ArithmeticType::NOT:
 		writeArithmeticNot(); break;
 	default:
@@ -246,8 +247,108 @@ void CodeWriter::writeArithmeticNot() {
 }
 
 void CodeWriter::writePushPop(CmdType cmd, const std::string& seg, int idx) {
+
+	auto seg_type = SegDict.at(seg);
+
 	switch (cmd) {
 	case CmdType::C_PUSH:
+		switch (seg_type) {
+		case SegType::CONST:
+			writePushConst(idx);
+			break;
+		case SegType::STATIC:
+			writePushStatic(idx);
+			break;
+		default:
+			writePopNonStatic(seg_type, idx);
+			break;
+		}
+		break;
 
+	case CmdType::C_POP:
+		switch(seg_type){
+		case SegType::CONST:
+			writePopConst();
+			break;
+		case SegType::STATIC:
+			writePopStatic(idx);
+			break;
+		default:
+			writePopNonStatic(seg_type, idx);
+			break;
+		}
+		break;
 	}
+}
+
+void CodeWriter::writePushNonStatic(SegType seg_type, int idx) {
+	std::string segment = SegTypeToAsmSymbol(seg_type);
+	_ofs << "@" << segment << std::endl
+		<< "D=A" << std::endl
+		<< "@" << idx << std::endl
+		<< "A=D+A" << std::endl
+		<< "D=M" << std::endl
+		<< "@SP" << std::endl
+		<< "A=A+1" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 8;
+}
+
+void CodeWriter::writePushStatic(int idx) {
+	_ofs
+		<< "@" << _filename << "." << idx << std::endl
+		<< "D-A" << std::endl
+		<< "@SP" << std::endl
+		<< "A=A+1" << std::endl
+		<< "M=D" << std::endl;
+
+	_asm_next_line += 5;
+}
+
+void CodeWriter::writePushConst(int value) {
+	_ofs
+		<< "@" << value << std::endl
+		<< "D=A" << std::endl
+		<< "@SP" << std::endl
+		<< "A=A+1" << std::endl
+		<< "M=D" << std::endl;
+
+	_asm_next_line += 5;
+}
+
+void CodeWriter::writePopNonStatic(SegType seg_type, int idx) {
+	std::string segment = SegTypeToAsmSymbol(seg_type);
+	_ofs << "@" << segment << std::endl
+		<< "D=M" << std::endl
+		<< "@" << idx << std::endl
+		<< "A=D+A" << std::endl
+		<< "@R13" << std::endl
+		<< "M=A" << std::endl
+		<< "@SP" << std::endl
+		<< "D=M" << std::endl
+		<< "@R13" << std::endl
+		<< "A=M" << std::endl
+		<< "M=D" << std::endl
+		<< "@0" << std::endl
+		<< "M=M-1" << std::endl;
+	_asm_next_line += 13;
+}
+
+void CodeWriter::writePopStatic(int idx)
+{
+	_ofs
+		<< "@SP" << std::endl
+		<< "D=M" << std::endl
+		<< "@" << _filename << "." << idx << std::endl
+		<< "M=D" << std::endl
+		<< "@0" << std::endl
+		<< "M=M-1" << std::endl;
+
+	_asm_next_line += 6;
+}
+
+void CodeWriter::writePopConst() {
+	_ofs << "@0" << std::endl
+		<< "M=M-1" << std::endl;
+	_asm_next_line += 2;
 }
