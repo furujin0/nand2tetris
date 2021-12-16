@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 enum class CmdType {
@@ -16,17 +17,52 @@ enum class CmdType {
 	C_CALL
 };
 
-const std::vector<std::string> arithmetic_cmds{
-	"add",
-	"sub",
-	"neg",
-	"eq",
-	"gt",
-	"lt",
-	"and",
-	"or",
-	"not"
+enum class SegType {
+	ARG,
+	LCL,
+	STATIC,
+	CONST,
+	THIS,
+	THAT,
+	POINTER,
+	TEMP
 };
+
+enum class ArithmeticType {
+	ADD,
+	SUB,
+	NEG,
+	EQ,
+	GT,
+	LT,
+	AND,
+	OR,
+	NOT
+};
+
+const std::unordered_map<std::string, ArithmeticType> ArithmeticCmdDict{
+	std::make_pair("add", ArithmeticType::ADD),
+	std::make_pair("sub", ArithmeticType::SUB),
+	std::make_pair("neg", ArithmeticType::NEG),
+	std::make_pair("eq", ArithmeticType::EQ),
+	std::make_pair("gt", ArithmeticType::GT),
+	std::make_pair("lt", ArithmeticType::LT),
+	std::make_pair("and", ArithmeticType::AND),
+	std::make_pair("or", ArithmeticType::OR),
+	std::make_pair("not", ArithmeticType::NOT)
+};
+
+
+const std::unordered_map<std::string, SegType> SegDict{
+	std::make_pair("argument", SegType::ARG),
+	std::make_pair("local", SegType::LCL),
+	std::make_pair("static", SegType::STATIC),
+	std::make_pair("this", SegType::THIS)
+};
+
+ArithmeticType toArithmeticType(const std::string& op) {
+	return ArithmeticCmdDict.at(op);
+}
 
 class Parser {
 private:
@@ -60,12 +96,18 @@ public:
 
 	void writeArithmetic(const std::string& cmd);
 
-	void writePushPop(const std::string& cmd, const std::string& seg, int idx);
+	void writePushPop(CmdType cmd, const std::string& seg, int idx);
 
 	void close();
 
-	void writeArithmeticNeg();
+	void writeArithmeticCompare(const std::string& cmd);
 
+	void writeArithmeticOneOp(const std::string& cmd);
+
+	void writeArithmeticTwoOp(const std::string& cmd);
+
+	void writeArithmeticNeg();
+		
 	void writeArithmeticNot();
 
 	void writeArithmeticAdd();

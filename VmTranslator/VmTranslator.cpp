@@ -47,8 +47,8 @@ void Parser::advance() {
 
 CmdType Parser::commandType()
 {
-	for (auto&& cmd : arithmetic_cmds) {
-		if (_line.find(cmd) == 0) {
+	for (auto&& cmd : ArithmeticCmdDict) {
+		if (_line.find(cmd.first) == 0) {
 			return CmdType::C_ARITHMETIC;
 		}
 	}
@@ -103,56 +103,97 @@ void CodeWriter::setFileName(const std::string& filename) {
 
 
 void CodeWriter::writeArithmetic(const std::string& cmd) {
-	_ofs << "@SP" << std::endl; //set stack pointer to the topmost value
-	if (cmd == "neg") {
-		_ofs << "M=-M" << std::endl;
-		return;
+	switch (toArithmeticType(cmd)) {
+	case ArithmeticType::ADD:
+		writeArithmeticAdd(); break;
+	case ArithmeticType::SUB:
+		writeArithmeticSub(); break;
+	case ArithmeticType::NEG:
+		writeArithmeticNeg(); break;
+	case ArithmeticType::EQ:
+		writeArithmeticEq(); break;
+	case ArithmeticType::LT:
+		writeArithmeticLt(); break;
+	case ArithmeticType::GT:
+		writeArithmeticGt(); break;
+	case ArithmeticType::AND:
+		writeArithmeticAnd(); break;
+	case ArithmeticType::OR:
+		writeArithmeticOr();
+	case ArithmeticType::NOT:
+		writeArithmeticNot(); break;
+	default:
+		break;
 	}
-	else if (cmd == "not") {
-		_ofs << "M=!M" << std::endl;
-		return;
-	}
-	_ofs << "D=M" << std::endl; // copy the topmost value
-
-	_ofs << "A=A-1" << std::endl;
-	_ofs << "R0=A" << std::endl; // update sp (now sp points to the result)
-
-	//output arithmetic or logical operation with two args
-	if (cmd == "add")
-		_ofs << "M=D+M";
-	else if (cmd == "sub")
-		_ofs << "M=D-M";
-	else if (cmd == "eq") {
-		_ofs << "D=D-M" << std::endl;
-		_ofs << "@" << std::endl;
-		_ofs << "D=D&A" << std::endl;
-		_ofs << "";
-
-	}
-	else if (cmd == "gt")
-		_ofs << "";
-	else if (cmd == "lt")
-		_ofs << "";
-	else if (cmd == "and")
-		_ofs << "D&M";
-	else if (cmd == "or")
-		_ofs << "D|M";
 
 }
 
-void CodeWriter::writeArithmeticEq() {
+void CodeWriter::writeArithmeticOneOp(const std::string& cmd) {
+	std::string op;
+	switch (ArithmeticCmdDict.at(cmd))
+	{
+	case ArithmeticType::NEG:
+		op = "-";
+	case ArithmeticType::NOT:
+		op = "!";
+	default:
+		break;
+	}
+	_ofs
+		<< "@SP" << std::endl
+		<< "M=" << op << "M" << std::endl;
+	_asm_next_line += 2;
+}
+
+void CodeWriter::writeArithmeticTwoOp(const std::string& cmd) {
+	std::string op;
+	switch (ArithmeticCmdDict.at(cmd))
+	{
+	case ArithmeticType::ADD:
+		op = "+";
+	case ArithmeticType::SUB:
+		op = "-";
+	case ArithmeticType::AND:
+		op = "&";
+	case ArithmeticType::OR:
+		op = "|";
+	default:
+		break;
+	}
+
+	_ofs
+		<< "@SP" << std::endl
+		<< "D=M" << std::endl
+		<< "A=A-1" << std::endl
+		<< "M=D" << op << "M" << std::endl
+		<< "@0" << std::endl
+		<< "M=A" << std::endl; //update stack pointer
+
+	_asm_next_line += 6;
+}
+
+void CodeWriter::writeArithmeticCompare(const std::string& cmd) {
 	int set_true_line = _asm_next_line + 10;
 	int set_false_line = _asm_next_line + 14;
 	int return_value_line = _asm_next_line + 19;
+
+	std::string opJump;
+	if (cmd == "eq") 
+		opJump = "JEQ";
+	else if (cmd == "lt")
+		opJump = "JGT";
+	else if (cmd == "gt")
+		opJump = "JLT";
+
 	_ofs
 		<< "@SP" << std::endl
 		<< "D=A" << std::endl
 		<< "A=A-1" << std::endl
-		<< "@R0" << std::endl
-		<< "M=A" << std::endl
+		<< "@0" << std::endl
+		<< "M=A" << std::endl // update stack pointer
 		<< "D=D-M" << std::endl
 		<< "@" << set_true_line << std::endl
-		<< "D;JEQ" << std::endl
+		<< "D;" << opJump << std::endl
 		<< "@" << set_false_line << std::endl
 		<< "0;JMP" << std::endl
 		<< "@65535" << std::endl
@@ -168,6 +209,45 @@ void CodeWriter::writeArithmeticEq() {
 	_asm_next_line += 20;
 }
 
-void CodeWriter::writePushPop(const std::string& cmd, const std::string& seg, int idx) {
+void CodeWriter::writeArithmeticAdd() {
+	writeArithmeticTwoOp("add");
+}
 
+void CodeWriter::writeArithmeticSub() {
+	writeArithmeticTwoOp("sub");
+};
+
+void CodeWriter::writeArithmeticNeg() {
+	writeArithmeticOneOp("neg");
+}
+
+void CodeWriter::writeArithmeticEq() {
+	writeArithmeticCompare("eq");
+}
+
+void CodeWriter::writeArithmeticGt() {
+	writeArithmeticCompare("gt");
+}
+
+void CodeWriter::writeArithmeticLt() {
+	writeArithmeticCompare("lt");
+}
+
+void CodeWriter::writeArithmeticAnd() {
+	writeArithmeticTwoOp("and");
+}
+
+void CodeWriter::writeArithmeticOr() {
+	writeArithmeticTwoOp("or");
+}
+
+void CodeWriter::writeArithmeticNot() {
+	writeArithmeticOneOp("not");
+}
+
+void CodeWriter::writePushPop(CmdType cmd, const std::string& seg, int idx) {
+	switch (cmd) {
+	case CmdType::C_PUSH:
+
+	}
 }
