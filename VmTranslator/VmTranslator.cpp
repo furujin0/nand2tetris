@@ -1,6 +1,38 @@
 #include <fstream>
 #include "VmTranslator.hpp"
 
+ArithmeticType toArithmeticType(const std::string& op) {
+	return ArithmeticCmdDict.at(op);
+}
+
+std::string SegTypeToAsmSymbol(SegType seg) {
+	std::string symbol;
+	switch (seg)
+	{
+	case SegType::ARG:
+		symbol = "ARG";
+		break;
+	case SegType::LCL:
+		symbol = "LCL";
+		break;
+	case SegType::THIS:
+		symbol = "THIS";
+		break;
+	case SegType::THAT:
+		symbol = "THAT";
+		break;
+	case SegType::POINTER:
+		symbol = "3";
+		break;
+	case SegType::TEMP:
+		symbol = "5";
+		break;
+	default:
+		break;
+	}
+	return symbol;
+}
+
 Parser::Parser(const std::string& filename):_ifs(filename + ".vm") {};
 
 bool Parser::hasMoreCommands() {
@@ -31,7 +63,7 @@ void Parser::advance() {
 	if (_line.find(' ') == 0) {
 		_line.erase(_line.begin());
 	}
-	if (_line.find(' ') == _line.size() - 1);
+	if (_line.find(' ') == _line.size() - 1)
 	{
 		_line.erase(_line.end() - 1);
 	}
@@ -351,4 +383,8 @@ void CodeWriter::writePopConst() {
 	_ofs << "@0" << std::endl
 		<< "M=M-1" << std::endl;
 	_asm_next_line += 2;
+}
+
+void CodeWriter::close() {
+	_ofs.close();
 }

@@ -64,37 +64,9 @@ const std::unordered_map<std::string, SegType> SegDict{
 	std::make_pair("constant", SegType::CONST)
 };
 
-ArithmeticType toArithmeticType(const std::string& op) {
-	return ArithmeticCmdDict.at(op);
-}
+ArithmeticType toArithmeticType(const std::string& op);
 
-std::string SegTypeToAsmSymbol(SegType seg) {
-	std::string symbol;
-	switch (seg)
-	{
-	case SegType::ARG:
-		symbol = "ARG";
-		break;
-	case SegType::LCL:
-		symbol = "LCL";
-		break;
-	case SegType::THIS:
-		symbol = "THIS";
-		break;
-	case SegType::THAT:
-		symbol = "THAT";
-		break;
-	case SegType::POINTER:
-		symbol = "3";
-		break;
-	case SegType::TEMP:
-		symbol = "5";
-		break;
-	default:
-		break;
-	}
-	return symbol;
-}
+std::string SegTypeToAsmSymbol(SegType seg);
 
 class Parser {
 private:
@@ -156,10 +128,6 @@ public:
 	void writeArithmeticGt();
 
 	void writeArithmeticLt();
-
-	void writePush(SegType seg, int idx);
-
-	void writePop(SegType seg, int idx);
 
 	void writePushNonStatic(SegType seg_type, int idx);
 	
