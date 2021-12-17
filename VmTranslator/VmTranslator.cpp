@@ -125,11 +125,13 @@ int Parser::arg2() {
 	return std::stoi(std::string(_line.begin() + pos_beg, _line.end()));
 }
 
-CodeWriter::CodeWriter(){}
+CodeWriter::CodeWriter(const std::string& targetName){
+	_ofs = std::ofstream(targetName + ".asm");
+	_filename = targetName;
+}
 
 void CodeWriter::setFileName(const std::string& filename) {
-	_ofs = std::ofstream(filename + ".asm");
-	_filename = filename;
+	_input_name = filename;
 }
 
 
@@ -380,7 +382,7 @@ void CodeWriter::writePushPointer(int idx) {
 
 void CodeWriter::writePushStatic(int idx) {
 	_ofs
-		<< "@" << _filename << "." << idx << std::endl
+		<< "@" << _input_name << "." << idx << std::endl
 		<< "D=M" << std::endl // get static object
 		<< "@SP" << std::endl //
 		<< "A=M" << std::endl // get the address to put the value
@@ -451,7 +453,7 @@ void CodeWriter::writePopStatic(int idx)
 		<< "M=M-1" << std::endl
 		<< "A=M" << std::endl
 		<< "D=M" << std::endl // get the topmost value of the stack
-		<< "@" << _filename << "." << idx << std::endl
+		<< "@" << _input_name << "." << idx << std::endl
 		<< "M=D" << std::endl; //set the value to the static object
 
 	_asm_next_line += 6;
@@ -495,7 +497,7 @@ void CodeWriter::writeIf(const std::string& label) {
 
 void CodeWriter::writeCall(const std::string& funcName, int numArgs) {
 
-	int return_address = 47 + 7 * numArgs + _asm_next_line;
+	int return_address = 43 + _asm_next_line;
 	//push return address
 	_ofs
 		<< "@" << return_address << std::endl
@@ -518,11 +520,7 @@ void CodeWriter::writeCall(const std::string& funcName, int numArgs) {
 			<< "M=M+1" << std::endl;
 		_asm_next_line += 7;
 	}
-	
-	//allocate & initialize local variables
-	for (int i = 0; i < numArgs; i++) {
-		writePushConst(0);
-	}
+
 	//update ARG address
 	_ofs << "@SP" << std::endl
 		<< "D=M" << std::endl
@@ -531,13 +529,6 @@ void CodeWriter::writeCall(const std::string& funcName, int numArgs) {
 		<< "@ARG" << std::endl
 		<< "M=D" << std::endl;
 	_asm_next_line += 6;
-
-	//update LCL address
-	_ofs << "@SP" << std::endl
-		<< "D=M" << std::endl
-		<< "@LCL" << std::endl
-		<< "M=D" << std::endl;
-	_asm_next_line += 4;
 
 	_ofs << "@" << funcName << std::endl
 		<< "0;JMP" << std::endl;
@@ -550,10 +541,9 @@ void CodeWriter::writeReturn() {
 		<< "M=M-1" << std::endl
 		<< "A=M" << std::endl
 		<< "D=M" << std::endl //store return value to D
-		<< "@ARG" << std::endl
-		<< "A=M" << std::endl
-		<< "M=D" << std::endl; // return value
-	_asm_next_line += 7;
+		<< "@R15" << std::endl
+		<< "M=D" << std::endl; // return value to R15
+	_asm_next_line += 6;
 
 	//move SP to LCL
 	_ofs << "@LCL" << std::endl
@@ -594,13 +584,24 @@ void CodeWriter::writeReturn() {
 		<< "M=D" << std::endl;
 	_asm_next_line += 5;
 
-	//update SP location before jump
+
+	//update SP location
 	_ofs
 		<< "@R13" << std::endl
 		<< "D=M" << std::endl
 		<< "@SP" << std::endl
 		<< "M=D" << std::endl;
 	_asm_next_line += 4;
+
+	//set return value
+	_ofs
+		<< "@R15" << std::endl
+		<< "D=M" << std::endl
+		<< "@SP" << std::endl
+		<< "A=M-1" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 5;
+
 	//jump
 	_ofs
 		<< "@R14" << std::endl
@@ -613,13 +614,15 @@ void CodeWriter::writeFunction(const std::string& funcName, int numLocals) {
 	_current_func = funcName;
 	_num_locals = numLocals;
 	_ofs << "(" << funcName << ")" << std::endl;
+	//update LCL address
+	_ofs << "@SP" << std::endl
+		<< "D=M" << std::endl
+		<< "@LCL" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 4;
 	for (int i = 0; i < numLocals; i++) {
 		writePushConst(0);
 	}
-	for (int i = 0; i < numLocals; i++) {
-		writePopConst();
-	}
-
 }
 
 void CodeWriter::close() {

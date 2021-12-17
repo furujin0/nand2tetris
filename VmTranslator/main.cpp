@@ -41,12 +41,17 @@ int main(int argc, char** argv) {
 		std::cout << path << std::endl;
 	}
 	std::cout << std::endl;
-	CodeWriter writer;
-	writer.setFileName(target_name);
+	CodeWriter writer(target_name);
 	writer.writeInit();
 	for (auto&& path : paths) {
+		std::cout << path << std::endl;
 		Parser parser(path);
-		std::cout << "Parser opened." << std::endl;
+		auto pos_beg = path.rfind("\\");
+		std::string filename(path.begin() + pos_beg + 1, path.end() - 3);
+		std::cout << "Parser opened a file: " << filename << std::endl;
+
+		writer.setFileName(filename);
+
 		while (parser.hasMoreCommands()) {
 			parser.advance();
 			std::cout << parser.currentCommand() << std::endl;

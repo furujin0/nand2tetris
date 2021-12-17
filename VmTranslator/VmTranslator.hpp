@@ -96,13 +96,14 @@ private:
 	std::ofstream _ofs;
 	int _asm_next_line = 0;
 	std::string _filename;
+	std::string _input_name;
 	std::string _current_func;
 	int _num_locals = 0;
 
 public:
-	CodeWriter();
+	CodeWriter(const std::string& targetName);
 
-	void setFileName(const std::string& filename);
+	void setFileName(const std::string& inputName);
 
 	void writeArithmetic(const std::string& cmd);
 
