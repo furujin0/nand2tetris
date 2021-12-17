@@ -61,7 +61,7 @@ void Parser::advance() {
 	if (!_line.empty() && _line.find(' ') == 0) {
 		_line.erase(_line.begin(), _line.begin() + 1);
 	}
-	if (!_line.empty() && _line.find(' ') == _line.size() - 1) {
+	if (!_line.empty() && _line.rfind(' ') == _line.size() - 1) {
 		_line.erase(_line.end() - 1, _line.end());
 	}
 	if (_line.empty() && hasMoreCommands()) {
@@ -116,6 +116,7 @@ std::string Parser::arg1() {
 	if (pos_end == decltype(_line)::npos) {
 		pos_end = _line.size();
 	}
+
 	return std::string(_line.begin() + pos_beg + 1, _line.begin() + pos_end);
 }
 
@@ -460,6 +461,165 @@ void CodeWriter::writePopConst() {
 	_ofs << "@SP" << std::endl
 		<< "M=M-1" << std::endl;
 	_asm_next_line += 2;
+}
+
+void CodeWriter::writeInit() {
+	_ofs 
+		<< "@256" << std::endl
+		<< "D=A" << std::endl
+		<< "@SP" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 4;
+	writeCall("Sys.init", 0);
+}
+
+void CodeWriter::writeLabel(const std::string& label) {
+	_ofs << "(" << _current_func << "$" << label << ")" << std::endl;
+}
+
+void CodeWriter::writeGoto(const std::string& label) {
+	_ofs << "@" << _current_func << "$" << label << std::endl
+		<< "0;JMP" << std::endl;
+	_asm_next_line += 2;
+}
+
+void CodeWriter::writeIf(const std::string& label) {
+	_ofs << "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl //store value to evaluate into D
+		<< "@" << _current_func << "$" << label << std::endl
+		<< "D;JNE" << std::endl; //if non-zero then jump
+	_asm_next_line += 6;
+}
+
+void CodeWriter::writeCall(const std::string& funcName, int numArgs) {
+
+	int return_address = 47 + 7 * numArgs + _asm_next_line;
+	//push return address
+	_ofs
+		<< "@" << return_address << std::endl
+		<< "D=A" << std::endl
+		<< "@SP" << std::endl
+		<< "A=M" << std::endl
+		<< "M=D" << std::endl // push return address
+		<< "@SP" << std::endl
+		<< "M=M+1" << std::endl;
+	_asm_next_line += 7;
+
+	// push lcl/arg/this/that of the caller
+	for (auto& symbol : std::vector<std::string>{ "LCL", "ARG", "THIS", "THAT" }) {
+		_ofs << "@" << symbol<< std::endl
+			<< "D=M" << std::endl
+			<< "@SP" << std::endl
+			<< "A=M" << std::endl
+			<< "M=D" << std::endl // push [symbol] address of caller func
+			<< "@SP" << std::endl
+			<< "M=M+1" << std::endl;
+		_asm_next_line += 7;
+	}
+	
+	//allocate & initialize local variables
+	for (int i = 0; i < numArgs; i++) {
+		writePushConst(0);
+	}
+	//update ARG address
+	_ofs << "@SP" << std::endl
+		<< "D=M" << std::endl
+		<< "@" << 5 + numArgs << std::endl
+		<< "D=D-A" << std::endl
+		<< "@ARG" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 6;
+
+	//update LCL address
+	_ofs << "@SP" << std::endl
+		<< "D=M" << std::endl
+		<< "@LCL" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 4;
+
+	_ofs << "@" << funcName << std::endl
+		<< "0;JMP" << std::endl;
+	_asm_next_line += 2;
+}
+
+void CodeWriter::writeReturn() {
+	//save the return value
+	_ofs << "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl //store return value to D
+		<< "@ARG" << std::endl
+		<< "A=M" << std::endl
+		<< "M=D" << std::endl; // return value
+	_asm_next_line += 7;
+
+	//move SP to LCL
+	_ofs << "@LCL" << std::endl
+		<< "D=M" << std::endl
+		<< "@SP" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 4;
+
+	writePopPointer(1); //update THIS
+	writePopPointer(0); //update THAT
+	
+	//save new SP location
+	_ofs << "@ARG" << std::endl
+		<< "D=M" << std::endl
+		<< "@R13" << std::endl
+		<< "M=D+1" << std::endl;
+	_asm_next_line += 4;
+	//pop ARG address of caller and store it to ARG register
+	_ofs << "@SP" << std::endl
+		<< "M=M-1" << std::endl
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl // store the caller's ARG address to D register
+		<< "@ARG" << std::endl
+		<< "M=D" << std::endl // update ARG address
+		<< "@SP" << std::endl
+		<< "M=M-1" << std::endl //decrement SP, now points LCL
+		<< "A=M" << std::endl
+		<< "D=M" << std::endl // store the callers's LCL address to D register
+		<< "@LCL" << std::endl
+		<< "M=D" << std::endl; // update LCL address
+	_asm_next_line += 12;
+	//store return address to R14
+	_ofs
+		<< "@SP" << std::endl
+		<< "A=M-1" << std::endl //now A is the addr of the return addr
+		<< "D=M" << std::endl // now D is the return addr
+		<< "@R14" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 5;
+
+	//update SP location before jump
+	_ofs
+		<< "@R13" << std::endl
+		<< "D=M" << std::endl
+		<< "@SP" << std::endl
+		<< "M=D" << std::endl;
+	_asm_next_line += 4;
+	//jump
+	_ofs
+		<< "@R14" << std::endl
+		<< "A=M" << std::endl
+		<< "0;JMP" << std::endl; // go to return addr
+	_asm_next_line += 3;
+}
+
+void CodeWriter::writeFunction(const std::string& funcName, int numLocals) {
+	_current_func = funcName;
+	_num_locals = numLocals;
+	_ofs << "(" << funcName << ")" << std::endl;
+	for (int i = 0; i < numLocals; i++) {
+		writePushConst(0);
+	}
+	for (int i = 0; i < numLocals; i++) {
+		writePopConst();
+	}
+
 }
 
 void CodeWriter::close() {

@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
 	std::cout << std::endl;
 	CodeWriter writer;
 	writer.setFileName(target_name);
+	writer.writeInit();
 	for (auto&& path : paths) {
 		Parser parser(path);
 		std::cout << "Parser opened." << std::endl;
@@ -51,14 +52,24 @@ int main(int argc, char** argv) {
 			std::cout << parser.currentCommand() << std::endl;
 			switch (parser.commandType()) {
 			case CmdType::C_ARITHMETIC:
-				writer.writeArithmetic(parser.arg1());
-				break;
+				writer.writeArithmetic(parser.arg1()); break;
 			case CmdType::C_POP:
-				writer.writePop(parser.arg1(), parser.arg2());
-				break;
+				writer.writePop(parser.arg1(), parser.arg2()); break;
 			case CmdType::C_PUSH:
-				writer.writePush(parser.arg1(), parser.arg2());
-				break;
+				std::cout << parser.arg1() << ", " << parser.arg2() << std::endl;
+				writer.writePush(parser.arg1(), parser.arg2()); break;
+			case CmdType::C_LABEL:
+				writer.writeLabel(parser.arg1()); break;
+			case CmdType::C_FUNCTION:
+				writer.writeFunction(parser.arg1(), parser.arg2()); break;
+			case CmdType::C_IF:
+				writer.writeIf(parser.arg1()); break;
+			case CmdType::C_CALL:
+				writer.writeCall(parser.arg1(), parser.arg2()); break;
+			case CmdType::C_RETURN:
+				writer.writeReturn(); break;
+			case CmdType::C_GOTO:
+				writer.writeGoto(parser.arg1()); break;
 			default:
 				break;
 			}

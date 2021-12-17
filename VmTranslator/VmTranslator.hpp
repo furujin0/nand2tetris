@@ -96,6 +96,8 @@ private:
 	std::ofstream _ofs;
 	int _asm_next_line = 0;
 	std::string _filename;
+	std::string _current_func;
+	int _num_locals = 0;
 
 public:
 	CodeWriter();
@@ -156,4 +158,17 @@ public:
 
 	void writePopConst();
 
+	void writeInit();
+
+	void writeLabel(const std::string& label);
+
+	void writeGoto(const std::string& label);
+
+	void writeIf(const std::string& label);
+
+	void writeCall(const std::string& funcName, int numArgs);
+
+	void writeReturn();
+
+	void writeFunction(const std::string& funcName, int numLocals);
 };
