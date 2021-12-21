@@ -81,3 +81,42 @@ public:
 
 	bool isIdentifier(const std::string& str) const;
 };
+
+class CompileEngine {
+	Tokenizer _tokenizer;
+	Formatter _formatter;
+	std::ofstream _ofs;
+	
+	CompileEngine(
+		const std::string& inputName,
+		const std::string& outputName
+	);
+
+	void compileClass();
+
+	void compileClassVarDec();
+
+	void compileSubroutine();
+
+	void compileParameterList();
+
+	void compileVarDec();
+
+	void compileStatements();
+
+	void compileDo();
+
+	void compileLet();
+
+	void compileWhile();
+
+	void compileReturn();
+
+	void compileIf();
+
+	void compileExpression();
+
+	void compileTerm();
+
+	void compileExpressionList();
+};
