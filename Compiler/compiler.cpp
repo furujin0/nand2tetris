@@ -141,6 +141,26 @@ bool Tokenizer::isIdentifier(const std::string& str) const{
 	return true;
 }
 
+KEYWORD Tokenizer::keyWord() const{
+	return dictKeyword.at(_token);
+}
+
+char Tokenizer::symbol() const {
+	return _token[0];
+}
+
+std::string Tokenizer::identifier() const {
+	return _token;
+}
+
+int Tokenizer::intVal() const {
+	return std::stoi(_token);
+}
+
+std::string Tokenizer::stringVal() const {
+	return std::move(std::string(_token.begin() + 1, _token.end() - 1));
+}
+
 bool Tokenizer::isNonTokenChar(char c) const {
 	return
 		c == ' '
