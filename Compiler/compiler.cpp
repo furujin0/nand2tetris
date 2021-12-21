@@ -1,3 +1,4 @@
+#include <cctype>
 #include <iostream>
 #include "compiler.hpp"
 
@@ -84,12 +85,67 @@ std::string Tokenizer::token() {
 	return _token;
 }
 
+TOKEN_TYPE Tokenizer::tokenType() const {
+	if (isKeyword(_token))
+		return TOKEN_TYPE::KEYWORD;
+	else if (isSymbol(_token))
+		return TOKEN_TYPE::SYMBOL;
+	else if (isInteger(_token))
+		return TOKEN_TYPE::INT_CONST;
+	else if (isString(_token))
+		return TOKEN_TYPE::STRING_CONST;
+	else if (isIdentifier(_token))
+		return TOKEN_TYPE::IDENTIFIER;
+	return TOKEN_TYPE::NON_TOKEN;
+}
+
+bool Tokenizer::isSymbol(char c) const{
+	return symbolSet.find(c) != symbolSet.end();
+}
+
+bool Tokenizer::isSymbol(const std::string& str) const {
+	return str.size() == 1 && isSymbol(str[0]);
+}
+
+bool Tokenizer::isKeyword(const std::string& str) const {
+	return dictKeyword.find(str) != dictKeyword.end();
+}
+
+bool Tokenizer::isInteger(const std::string& str) const {
+	int x = -1;
+	auto res = true;
+	try {
+		x = std::stoi(str);
+		if (x < 0 || x > 32767) {
+			res = false;
+		}
+	}
+	catch (std::invalid_argument) {
+		res = false;
+	}
+	return res;
+}
+
+bool Tokenizer::isString(const std::string& str) const {
+	return *str.begin() == '"' && *(--str.end()) == '"';
+}
+
+bool Tokenizer::isIdentifier(const std::string& str) const{
+	if (std::isdigit(str[0]))
+		return false;
+
+	for (auto&& c : str) {
+		if (!std::isalpha(c) && c !='_' && !std::isdigit(c))
+			return false;
+	}
+	return true;
+}
 
 bool Tokenizer::isNonTokenChar(char c) const {
 	return
 		c == ' '
 		|| c == '\n'
 		|| c == '\r'
-		|| symbolSet.find(c) != symbolSet.end()
+		|| isSymbol(c)
 		|| c == std::char_traits<char>::eof();
 }

@@ -65,7 +65,19 @@ public:
 
 	int intVal() const;
 
-	std::string StringVal() const;
+	std::string stringVal() const;
 
 	bool isNonTokenChar(char c) const;
+
+	bool isSymbol(char c) const;
+
+	bool isSymbol(const std::string& str) const;
+
+	bool isKeyword(const std::string& str) const;
+
+	bool isInteger(const std::string& str) const;
+
+	bool isString(const std::string& str) const;
+
+	bool isIdentifier(const std::string& str) const;
 };
