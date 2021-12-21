@@ -1,29 +1,71 @@
+#pragma once
+
 #include <fstream>
+#include <set>
 #include <string>
 #include "privdef.hpp"
 
+
+
+class Formatter {
+public:
+	void eraseComments(
+		const std::string& inputName,
+		const std::string& outputName
+	) const;
+};
+
 class Tokenizer {
+
+	std::unordered_map<std::string, KEYWORD> dictKeyword{
+		std::make_pair(std::string("class"), KEYWORD::CLASS),
+		std::make_pair(std::string("method"), KEYWORD::METHOD),
+		std::make_pair(std::string("constructor"), KEYWORD::CONSTRUCTOR),
+		std::make_pair(std::string("int"), KEYWORD::INT),
+		std::make_pair(std::string("var"), KEYWORD::VAR),
+		std::make_pair(std::string("static"), KEYWORD::STATIC),
+		std::make_pair(std::string("field"), KEYWORD::FIELD),
+		std::make_pair(std::string("let"), KEYWORD::LET),
+		std::make_pair(std::string("do"), KEYWORD::DO),
+		std::make_pair(std::string("if"), KEYWORD::IF),
+		std::make_pair(std::string("else"), KEYWORD::ELSE),
+		std::make_pair(std::string("while"), KEYWORD::WHILE),
+		std::make_pair(std::string("return"), KEYWORD::RETURN),
+		std::make_pair(std::string("true"), KEYWORD::TRUE),
+		std::make_pair(std::string("false"), KEYWORD::FALSE),
+		std::make_pair(std::string("null"), KEYWORD::NULL_WORD),
+		std::make_pair(std::string("this"), KEYWORD::THIS)
+	};
+
+	std::set<char> symbolSet{
+		'{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-'
+	};
+
 	std::ifstream _ifs;
 	std::string _inputName;
+	std::string _token;
 
 public:
 	Tokenizer(const std::string& inputName);
 
-	bool hasMoreTokens();
+	bool hasMoreTokens() const;
 
-	void eraseComments(const std::string& outputName);
 
 	void advance();
+	
+	std::string token();
 
-	TOKEN_TYPE tokenType();
+	TOKEN_TYPE tokenType() const;
 
-	KEYWORD keyWord();
+	KEYWORD keyWord() const;
 
-	char symbol();
+	char symbol() const;
 
-	std::string identifier();
+	std::string identifier() const;
 
-	int intVal();
+	int intVal() const;
 
-	std::string StringVal();
+	std::string StringVal() const;
+
+	bool isNonTokenChar(char c) const;
 };

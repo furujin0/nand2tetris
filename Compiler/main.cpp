@@ -1,8 +1,18 @@
+#include <iostream>
 #include "compiler.hpp"
 
 int main(int argc, char** argv) {
-	Tokenizer tokenizer("test.vm");
+	std::string inputName("Square.jack");
+	std::string formattedName("testProcessed.txt");
+	Formatter formatter;
+	formatter.eraseComments(inputName, formattedName);
 
-	tokenizer.eraseComments("testProcessed.txt");
+	Tokenizer tokenizer(formattedName);
+	
+	while (tokenizer.hasMoreTokens()) {
+		tokenizer.advance();
+		std::cout << tokenizer.token() << std::endl;
+	}
+
 	return 0;
 }

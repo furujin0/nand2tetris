@@ -1,5 +1,9 @@
 #pragma once
 
+#include <set>
+#include <string>
+#include <unordered_map>
+
 enum class TOKEN_TYPE{
 	KEYWORD,
 	SYMBOL,
