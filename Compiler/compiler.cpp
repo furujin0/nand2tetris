@@ -194,26 +194,25 @@ void CompileEngine::compileClass() {
 	writeSymbol(_tokenizer.symbol());
 
 	_tokenizer.advance();
-	while (true) {
-		if(_tokenizer.tokenType()
-			!= TOKEN_TYPE::KEYWORD
-			|| _tokenizer.keyWord() != KEYWORD::STATIC
-			|| _tokenizer.keyWord() != KEYWORD::FIELD) {
-			break;
-		}
+	while (_tokenizer.tokenType() != TOKEN_TYPE::KEYWORD
+		&& (_tokenizer.keyWord() == KEYWORD::STATIC || _tokenizer.keyWord() == KEYWORD::FIELD)) {
 		compileClassVarDec();
 	}
-	while (true) {
-		
+	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD
+		&& (_tokenizer.keyWord() == KEYWORD::CONSTRUCTOR
+			|| _tokenizer.keyWord() == KEYWORD::FUNCTION
+			|| _tokenizer.keyWord() == KEYWORD::METHOD)
+		)
+	{
+		compileSubroutine();
 	}
-	compileSubroutine();
 
-	_tokenizer.advance();
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != '}') {
 		std::cerr << "} is missing." << std::endl;
 		return;
 	}
 	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
 	return;
 }
 
@@ -582,4 +581,22 @@ void CompileEngine::writeIntConst(int value) {
 
 void CompileEngine::writeStringConst(const std::string& str) {
 	_ofs << "<stringConstant> " << str << " </stringConstant>" << std::endl;
+}
+
+void CompileEngine::compileExpression() {
+	compileTerm();
+	while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && isOp(_tokenizer.symbol())) {
+		writeSymbol(_tokenizer.symbol());
+		_tokenizer.advance();
+		compileTerm();
+	}
+}
+
+void CompileEngine::compileExpressionList() {
+	compileExpression();
+	while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == ',') {
+		writeSymbol(_tokenizer.symbol());
+		_tokenizer.advance();
+		compileExpression();
+	}
 }
