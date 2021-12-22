@@ -86,7 +86,8 @@ class CompileEngine {
 	Formatter _formatter;
 	std::ofstream _ofs;
 	std::unordered_set<std::string> classSet;
-	
+
+public:
 	CompileEngine(
 		const std::string& inputName,
 		const std::string& outputName
@@ -134,7 +135,7 @@ class CompileEngine {
 
 	bool isClassName(const std::string& name);
 
-	bool isBultInType(const std::string& type);
+	bool isBuiltInType(const std::string& type);
 
 	bool isOp(char c);
 

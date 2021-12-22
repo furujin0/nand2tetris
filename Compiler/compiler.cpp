@@ -170,6 +170,14 @@ bool Tokenizer::isNonTokenChar(char c) const {
 		|| c == std::char_traits<char>::eof();
 }
 
+CompileEngine::CompileEngine(
+	const std::string& inputName,
+	const std::string& outputName
+):_tokenizer(inputName)
+{
+	_ofs.open(outputName);	
+}
+
 void CompileEngine::compileClass() {
 	_ofs << "<class>" << std::endl;
 	_tokenizer.advance();
@@ -213,6 +221,7 @@ void CompileEngine::compileClass() {
 	}
 	writeSymbol(_tokenizer.symbol());
 	_tokenizer.advance();
+	_ofs << "</class>";
 	return;
 }
 
@@ -378,7 +387,7 @@ bool CompileEngine::isClassName(const std::string& name) {
 	return classSet.find(name) != classSet.end();
 }
 
-bool CompileEngine::isBultInType(const std::string& type) {
+bool CompileEngine::isBuiltInType(const std::string& type) {
 	return type == "int" || type == "char" || type == "boolean";
 }
 
