@@ -207,8 +207,7 @@ void CompileEngine::compileClass() {
 		std::cerr << "{ is missing." << std::endl;
 		return;
 	}
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	
 	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD
 		&& (_tokenizer.keyWord() == KEYWORD::STATIC || _tokenizer.keyWord() == KEYWORD::FIELD)) {
@@ -227,8 +226,7 @@ void CompileEngine::compileClass() {
 		std::cerr << "} is missing." << std::endl;
 		return;
 	}
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	indent -= 2;
 	_ofs << "</class>";
 	return;
@@ -237,8 +235,7 @@ void CompileEngine::compileClass() {
 void CompileEngine::compileClassVarDec() {
 	_ofs << std::string(indent, ' ') << "<classVarDec>" << std::endl;
 	indent += 2;
-	writeKeyword(_tokenizer.keyWord()); //output static / field
-	_tokenizer.advance();
+	compileKeyword();
 	writeType();
 
 	do {
@@ -259,32 +256,27 @@ void CompileEngine::compileSubroutine() {
 	_ofs << std::string(indent, ' ') << "<subroutineDec>" << std::endl;
 	indent += 2;
 
-	writeKeyword(_tokenizer.keyWord()); // constructor or function or method
-	_tokenizer.advance();
+	compileKeyword();
 	//void or type
 	writeType();
 	_tokenizer.advance();
 	//subroutine name
 	compileIdentifier();
 	//(
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	compileParameterList();
 	//)
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 
 	//subroutine body
 	_ofs << std::string(indent, ' ') << "<subroutineBody>" << std::endl;
 	indent += 2;
-	writeSymbol(_tokenizer.symbol());//{
-	_tokenizer.advance();
+	compileSymbol();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::VAR) {
 		compileVarDec();
 	}
 	compileStatements();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	indent -= 2;
 	_ofs << std::string(indent, ' ') << "</subroutineBody>" << std::endl;
 	indent -= 2;
@@ -295,8 +287,7 @@ void CompileEngine::compileVarDec() {
 	_ofs << std::string(indent, ' ') << "<varDec>" << std::endl;
 	indent += 2;
 
-	writeKeyword(_tokenizer.keyWord());
-	_tokenizer.advance();
+	compileKeyword();
 	writeType();
 	do {
 		_tokenizer.advance();
@@ -316,8 +307,7 @@ void CompileEngine::compileIdentifier() {
 	writeIdentifier(_tokenizer.identifier());
 	_tokenizer.advance();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '.') {
-		writeSymbol(_tokenizer.symbol());
-		_tokenizer.advance();
+		compileSymbol();
 		writeIdentifier(_tokenizer.identifier());
 		_tokenizer.advance();
 	}
@@ -332,8 +322,7 @@ void CompileEngine::compileParameterList() {
 			_tokenizer.advance();
 			compileIdentifier();
 			if (_tokenizer.symbol() == ',') {
-				writeSymbol(_tokenizer.symbol());
-				_tokenizer.advance();
+				compileSymbol();
 			}
 			else {
 				break;
@@ -465,21 +454,16 @@ void CompileEngine::compileStatements() {
 void CompileEngine::compileLet() {
 	_ofs << std::string(indent, ' ') << "<letStatement>" << std::endl;
 	indent += 2;
-	writeKeyword(_tokenizer.keyWord());
-	_tokenizer.advance();
+	compileKeyword();
 	compileIdentifier();
 	if (_tokenizer.symbol() == '[') {
-		writeSymbol(_tokenizer.symbol());
-		_tokenizer.advance();
+		compileSymbol();
 		compileExpression();
-		writeSymbol(_tokenizer.symbol());
-		_tokenizer.advance();
+		compileSymbol();
 	}
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	compileExpression();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	indent -= 2;
 	_ofs << std::string(indent, ' ') << "</letStatement>" << std::endl;
 }
@@ -488,26 +472,18 @@ void CompileEngine::compileIf() {
 	_ofs << std::string(indent, ' ') << "<ifStatement>" << std::endl;
 	indent += 2;
 
-	writeKeyword(_tokenizer.keyWord());
-	_tokenizer.advance();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileKeyword();
+	compileSymbol();
 	compileExpression();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
+	compileSymbol();
 	compileStatements();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::ELSE) {
-		writeKeyword(_tokenizer.keyWord());
-		_tokenizer.advance();
-		writeSymbol(_tokenizer.symbol());
-		_tokenizer.advance();
+		compileKeyword();
+		compileSymbol();
 		compileStatements();
-		writeSymbol(_tokenizer.symbol());
-		_tokenizer.advance();
+		compileSymbol();
 	}
 	indent -= 2;
 
@@ -517,18 +493,13 @@ void CompileEngine::compileIf() {
 void CompileEngine::compileWhile() {
 	_ofs << std::string(indent, ' ') << "<whileStatement>" << std::endl;
 	indent += 2;
-	writeKeyword(_tokenizer.keyWord());
-	_tokenizer.advance();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileKeyword();
+	compileSymbol();
 	compileExpression();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
+	compileSymbol();
 	compileStatements();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	indent -= 2;
 	_ofs << std::string(indent, ' ') << "</whileStatement>" << std::endl;
 }
@@ -536,35 +507,29 @@ void CompileEngine::compileWhile() {
 void CompileEngine::compileDo() {
 	_ofs << std::string(indent, ' ') << "<doStatement>" << std::endl;
 	indent += 2;
-	writeKeyword(_tokenizer.keyWord());
-	_tokenizer.advance();
+	compileKeyword();
 	compileSubroutineCall();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	indent -= 2;
 	_ofs << std::string(indent, ' ') << "</doStatement>" << std::endl;
 }
 
 void CompileEngine::compileSubroutineCall() {
 	compileIdentifier();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	compileExpressionList();
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 }
 
 void CompileEngine::compileReturn() {
 	_ofs << std::string(indent, ' ') << "<returnStatement>" << std::endl;
 	indent += 2;
 
-	writeKeyword(_tokenizer.keyWord());
-	_tokenizer.advance();
+	compileKeyword();
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ';') {
 		compileExpression();
 	}
-	writeSymbol(_tokenizer.symbol());
-	_tokenizer.advance();
+	compileSymbol();
 	indent -= 2;
 
 	_ofs << std::string(indent, ' ') << "</returnStatement>" << std::endl;
@@ -592,38 +557,30 @@ void CompileEngine::compileTerm() {
 		_tokenizer.advance();
 		break;
 	case TOKEN_TYPE::KEYWORD:
-		writeKeyword(_tokenizer.keyWord());
-		_tokenizer.advance();
+		compileKeyword();
 		break;
 	case TOKEN_TYPE::SYMBOL:
 		if (_tokenizer.symbol() == '(') {
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 			compileExpression();
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 		}
 		else {
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 			compileTerm();
 		}
 		break;
 	case TOKEN_TYPE::IDENTIFIER:
 		compileIdentifier();
 		if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '[') {
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 			compileExpression();
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 		}
 		else if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '(') {
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 			compileExpressionList();
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 		}
 		break;
 	case TOKEN_TYPE::NON_TOKEN:
@@ -650,8 +607,7 @@ void CompileEngine::compileExpression() {
 
 	compileTerm();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && isOp(_tokenizer.symbol())) {
-		writeSymbol(_tokenizer.symbol());
-		_tokenizer.advance();
+		compileSymbol();
 		compileTerm();
 	}
 	indent -= 2;
@@ -663,10 +619,20 @@ void CompileEngine::compileExpressionList() {
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ')') {
 		compileExpression();
 		while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == ',') {
-			writeSymbol(_tokenizer.symbol());
-			_tokenizer.advance();
+			compileSymbol();
 			compileExpression();
 		}
 	}
 	_ofs << std::string(indent, ' ') << "</expressionList>" << std::endl;
+}
+
+void CompileEngine::compileKeyword() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+}
+
+
+void CompileEngine::compileSymbol() {
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
 }

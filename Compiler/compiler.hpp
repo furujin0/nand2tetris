@@ -149,5 +149,7 @@ public:
 
 	void compileIdentifier();
 
-	void compileSubroutineBody();
+	void compileSymbol();
+
+	void compileKeyword();
 };
