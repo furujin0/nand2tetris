@@ -99,7 +99,7 @@ TOKEN_TYPE Tokenizer::tokenType() const {
 	return TOKEN_TYPE::NON_TOKEN;
 }
 
-bool Tokenizer::isSymbol(char c) const{
+bool Tokenizer::isSymbol(char c) const {
 	return symbolSet.find(c) != symbolSet.end();
 }
 
@@ -130,18 +130,18 @@ bool Tokenizer::isString(const std::string& str) const {
 	return *str.begin() == '"' && *(--str.end()) == '"';
 }
 
-bool Tokenizer::isIdentifier(const std::string& str) const{
+bool Tokenizer::isIdentifier(const std::string& str) const {
 	if (std::isdigit(str[0]))
 		return false;
 
 	for (auto&& c : str) {
-		if (!std::isalpha(c) && c !='_' && !std::isdigit(c))
+		if (!std::isalpha(c) && c != '_' && !std::isdigit(c))
 			return false;
 	}
 	return true;
 }
 
-KEYWORD Tokenizer::keyWord() const{
+KEYWORD Tokenizer::keyWord() const {
 	return dictKeyword.at(_token);
 }
 
@@ -168,4 +168,418 @@ bool Tokenizer::isNonTokenChar(char c) const {
 		|| c == '\r'
 		|| isSymbol(c)
 		|| c == std::char_traits<char>::eof();
+}
+
+void CompileEngine::compileClass() {
+	_ofs << "<class>" << std::endl;
+	_tokenizer.advance();
+	if (_tokenizer.tokenType() != TOKEN_TYPE::KEYWORD || _tokenizer.keyWord() != KEYWORD::CLASS) {
+		std::cerr << "The source file must start with the definition of a class. (class { ..." << std::endl;
+		return;
+	}
+	writeKeyword(KEYWORD::CLASS);
+
+	_tokenizer.advance();
+	if (_tokenizer.tokenType() != TOKEN_TYPE::IDENTIFIER) {
+		std::cerr << "Class name is missing." << std::endl;
+		return;
+	}
+	writeIdentifier(_tokenizer.identifier());
+
+	_tokenizer.advance();
+	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != '{') {
+		std::cerr << "{ is missing." << std::endl;
+		return;
+	}
+	writeSymbol(_tokenizer.symbol());
+
+	_tokenizer.advance();
+	while (true) {
+		if(_tokenizer.tokenType()
+			!= TOKEN_TYPE::KEYWORD
+			|| _tokenizer.keyWord() != KEYWORD::STATIC
+			|| _tokenizer.keyWord() != KEYWORD::FIELD) {
+			break;
+		}
+		compileClassVarDec();
+	}
+	while (true) {
+		
+	}
+	compileSubroutine();
+
+	_tokenizer.advance();
+	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != '}') {
+		std::cerr << "} is missing." << std::endl;
+		return;
+	}
+	writeSymbol(_tokenizer.symbol());
+	return;
+}
+
+void CompileEngine::compileClassVarDec() {
+	writeKeyword(_tokenizer.keyWord()); //output static / field
+
+	_tokenizer.advance();
+	writeType();
+
+	do {
+		_tokenizer.advance();
+		writeIdentifier(_tokenizer.identifier());
+		_tokenizer.advance();
+		writeSymbol(_tokenizer.symbol()); // comma or semicolon
+		if (_tokenizer.symbol() == ';') {
+			break;
+		}
+	} while (true);
+
+
+	_tokenizer.advance();
+	writeIdentifier(_tokenizer.identifier());
+
+	_tokenizer.advance();
+}
+
+void CompileEngine::compileSubroutine() {
+	writeKeyword(_tokenizer.keyWord()); // constructor or function or method
+	_tokenizer.advance();
+	//void or type
+	if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD) {
+		writeKeyword(_tokenizer.keyWord());
+	}
+	else {
+		writeIdentifier(_tokenizer.identifier());
+	}
+	_tokenizer.advance();
+	//subroutine name
+	writeIdentifier(_tokenizer.identifier());
+	_tokenizer.advance();
+	//(
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	if(_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL && _tokenizer.symbol() != ')')
+		compileParameterList();
+	//)
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+
+	//subroutine body
+	writeSymbol(_tokenizer.symbol());//{
+	_tokenizer.advance();
+	while (true) {
+		if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD) {
+			compileVarDec();
+			_tokenizer.advance();
+		}
+		else {
+			break;
+		}
+	}
+	compileStatements();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+}
+
+void CompileEngine::compileVarDec() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+	writeType();
+	do {
+		_tokenizer.advance();
+		writeIdentifier(_tokenizer.identifier());
+		_tokenizer.advance();
+		writeSymbol(_tokenizer.symbol());
+		if (_tokenizer.symbol() == ';') {
+			break;
+		}
+	} while (true);
+	_tokenizer.advance();
+}
+
+void CompileEngine::compileParameterList() {
+	do {
+		writeType();
+		_tokenizer.advance();
+		writeIdentifier(_tokenizer.identifier());
+		_tokenizer.advance();
+		if (_tokenizer.symbol() == ',') {
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+		}
+		else{
+			break;
+		}
+	} while (true);
+}
+
+void CompileEngine::writeSymbol(const char c) {
+	_ofs << "<symbol> " << c << "</symbol>" << std::endl;
+}
+
+void CompileEngine::writeKeyword(KEYWORD keyword) {
+	std::string keywordStr;
+	switch (keyword)
+	{
+	case KEYWORD::CLASS:
+		keywordStr = "class"; break;
+	case KEYWORD::METHOD:
+		keywordStr = "method"; break;
+	case KEYWORD::FUNCTION:
+		keywordStr = "function"; break;
+	case KEYWORD::CONSTRUCTOR:
+		keywordStr = "constructor"; break;
+	case KEYWORD::INT:
+		keywordStr = "int"; break;
+	case KEYWORD::VAR:
+		keywordStr = "var"; break;
+	case KEYWORD::STATIC:
+		keywordStr = "static"; break;
+	case KEYWORD::FIELD:
+		keywordStr = "field"; break;
+	case KEYWORD::LET:
+		keywordStr = "let"; break;
+	case KEYWORD::DO:
+		keywordStr = "do"; break;
+	case KEYWORD::IF:
+		keywordStr = "if"; break;
+	case KEYWORD::ELSE:
+		keywordStr = "else"; break;
+	case KEYWORD::WHILE:
+		keywordStr = "while"; break;
+	case KEYWORD::RETURN:
+		keywordStr = "return"; break;
+	case KEYWORD::TRUE:
+		keywordStr = "true"; break;
+	case KEYWORD::FALSE:
+		keywordStr = "false"; break;
+	case KEYWORD::NULL_WORD:
+		keywordStr = "null"; break;
+	case KEYWORD::THIS:
+		keywordStr = "this"; break;
+	case KEYWORD::VOID:
+		keywordStr = "void"; break;
+	default:
+		break;
+	}
+	_ofs << "<keyword> " << keywordStr << " </keyword>" << std::endl;
+}
+
+void CompileEngine::writeIdentifier(const std::string& identifier) {
+	_ofs << "<identifier> " << identifier << " </identifier>" << std::endl;
+}
+
+void CompileEngine::writeType() {
+	if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD)
+		writeKeyword(_tokenizer.keyWord());
+	else
+		writeIdentifier(_tokenizer.identifier());
+}
+
+bool CompileEngine::isClassName(const std::string& name) {
+	return classSet.find(name) != classSet.end();
+}
+
+bool CompileEngine::isBultInType(const std::string& type) {
+	return type == "int" || type == "char" || type == "boolean";
+}
+
+void CompileEngine::compileStatements() {
+	bool hasMoreStatements = true;
+	while (hasMoreStatements) {
+		if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD) {
+			switch (_tokenizer.keyWord()) {
+			case KEYWORD::LET:
+				compileLet(); break;
+			case KEYWORD::IF:
+				compileIf(); break;
+			case KEYWORD::WHILE:
+				compileWhile(); break;
+			case KEYWORD::DO:
+				compileDo(); break;
+			case KEYWORD::RETURN:
+				compileReturn(); break;
+			default:
+				hasMoreStatements = false; break;
+			}
+		}
+		else {
+			hasMoreStatements = false;
+		}
+	}
+}
+
+void CompileEngine::compileLet() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+	writeIdentifier(_tokenizer.identifier());
+	_tokenizer.advance();
+	if (_tokenizer.symbol() == '[') {
+		writeSymbol(_tokenizer.symbol());
+		_tokenizer.advance();
+		compileExpression();
+		writeSymbol(_tokenizer.symbol());
+		_tokenizer.advance();
+	}
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileExpression();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+}
+
+void CompileEngine::compileIf() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileExpression();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileStatements();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::ELSE) {
+		writeKeyword(_tokenizer.keyWord());
+		_tokenizer.advance();
+		writeSymbol(_tokenizer.symbol());
+		_tokenizer.advance();
+		compileStatements();
+		writeSymbol(_tokenizer.symbol());
+		_tokenizer.advance();
+	}
+}
+
+void CompileEngine::compileWhile() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileExpression();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileStatements();
+	writeSymbol(_tokenizer.symbol());
+}
+
+void CompileEngine::compileDo() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+	compileSubroutineCall();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+}
+
+void CompileEngine::compileSubroutineCall() {
+	writeIdentifier(_tokenizer.identifier());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileExpressionList();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	writeIdentifier(_tokenizer.identifier());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	writeIdentifier(_tokenizer.identifier());
+	_tokenizer.advance();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+	compileExpressionList();
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+}
+
+void CompileEngine::compileReturn() {
+	writeKeyword(_tokenizer.keyWord());
+	_tokenizer.advance();
+	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ';') {
+		compileExpression();
+	}
+	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
+}
+
+bool CompileEngine::isOp(char c) {
+	return c == '+' || c == '-' || c == '*' || c == '/' || c == '&' || c == '|' || c == '<' || c == '>' || c == '=';
+}
+
+bool CompileEngine::isUnaryOp(char c) {
+	return c == '+' || c == '-';
+}
+
+void CompileEngine::compileTerm() {
+	switch (_tokenizer.tokenType()) {
+	case TOKEN_TYPE::INT_CONST:
+		writeIntConst(_tokenizer.intVal());
+		_tokenizer.advance();
+		break;
+	case TOKEN_TYPE::STRING_CONST:
+		writeStringConst(_tokenizer.stringVal());
+		_tokenizer.advance();
+		break;
+	case TOKEN_TYPE::KEYWORD:
+		writeKeyword(_tokenizer.keyWord());
+		_tokenizer.advance();
+		break;
+	case TOKEN_TYPE::SYMBOL:
+		if (_tokenizer.symbol() == '(') {
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			compileExpression();
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+		}
+		else {
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			compileTerm();
+		}
+		break;
+	case TOKEN_TYPE::IDENTIFIER:
+		writeIdentifier(_tokenizer.identifier());
+		_tokenizer.advance();
+		if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '[') {
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			compileExpression();
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+		}
+		else if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '(') {
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			compileExpressionList();
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			writeIdentifier(_tokenizer.identifier());
+			_tokenizer.advance();
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			writeIdentifier(_tokenizer.identifier());
+			_tokenizer.advance();
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+			compileExpressionList();
+			writeSymbol(_tokenizer.symbol());
+			_tokenizer.advance();
+		}
+		break;
+	case TOKEN_TYPE::NON_TOKEN:
+		break;
+	default:
+		break;
+	}
+}
+
+void CompileEngine::writeIntConst(int value) {
+	_ofs << "<integerConstant> " << value << " </integerConstant>" << std::endl;
+}
+
+void CompileEngine::writeStringConst(const std::string& str) {
+	_ofs << "<stringConstant> " << str << " </stringConstant>" << std::endl;
 }

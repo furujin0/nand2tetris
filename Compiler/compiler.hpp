@@ -2,10 +2,9 @@
 
 #include <fstream>
 #include <set>
+#include <unordered_set>
 #include <string>
 #include "privdef.hpp"
-
-
 
 class Formatter {
 public:
@@ -34,7 +33,8 @@ class Tokenizer {
 		std::make_pair(std::string("true"), KEYWORD::TRUE),
 		std::make_pair(std::string("false"), KEYWORD::FALSE),
 		std::make_pair(std::string("null"), KEYWORD::NULL_WORD),
-		std::make_pair(std::string("this"), KEYWORD::THIS)
+		std::make_pair(std::string("this"), KEYWORD::THIS),
+		std::make_pair(std::string("void"), KEYWORD::VOID)
 	};
 
 	std::set<char> symbolSet{
@@ -49,7 +49,6 @@ public:
 	Tokenizer(const std::string& inputName);
 
 	bool hasMoreTokens() const;
-
 
 	void advance();
 	
@@ -86,6 +85,7 @@ class CompileEngine {
 	Tokenizer _tokenizer;
 	Formatter _formatter;
 	std::ofstream _ofs;
+	std::unordered_set<std::string> classSet;
 	
 	CompileEngine(
 		const std::string& inputName,
@@ -119,4 +119,26 @@ class CompileEngine {
 	void compileTerm();
 
 	void compileExpressionList();
+
+	void writeKeyword(KEYWORD keyword);
+
+	void writeSymbol(char c);
+
+	void writeIdentifier(const std::string& identifier);
+
+	void writeType();
+
+	void writeIntConst(int value);
+
+	void writeStringConst(const std::string& str);
+
+	bool isClassName(const std::string& name);
+
+	bool isBultInType(const std::string& type);
+
+	bool isOp(char c);
+
+	bool isUnaryOp(char c);
+
+	void compileSubroutineCall();
 };
