@@ -32,5 +32,6 @@ enum class KEYWORD {
 	FALSE,
 	NULL_WORD,
 	THIS,
-	VOID
+	VOID,
+	BOOLEAN
 };

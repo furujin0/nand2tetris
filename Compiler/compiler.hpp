@@ -20,6 +20,7 @@ class Tokenizer {
 		std::make_pair(std::string("class"), KEYWORD::CLASS),
 		std::make_pair(std::string("method"), KEYWORD::METHOD),
 		std::make_pair(std::string("constructor"), KEYWORD::CONSTRUCTOR),
+		std::make_pair(std::string("function"), KEYWORD::FUNCTION),
 		std::make_pair(std::string("int"), KEYWORD::INT),
 		std::make_pair(std::string("var"), KEYWORD::VAR),
 		std::make_pair(std::string("static"), KEYWORD::STATIC),
@@ -34,7 +35,8 @@ class Tokenizer {
 		std::make_pair(std::string("false"), KEYWORD::FALSE),
 		std::make_pair(std::string("null"), KEYWORD::NULL_WORD),
 		std::make_pair(std::string("this"), KEYWORD::THIS),
-		std::make_pair(std::string("void"), KEYWORD::VOID)
+		std::make_pair(std::string("void"), KEYWORD::VOID),
+		std::make_pair(std::string("boolean"), KEYWORD::BOOLEAN)
 	};
 
 	std::set<char> symbolSet{
@@ -86,6 +88,7 @@ class CompileEngine {
 	Formatter _formatter;
 	std::ofstream _ofs;
 	std::unordered_set<std::string> classSet;
+	int indent = 0;
 
 public:
 	CompileEngine(
@@ -132,7 +135,7 @@ public:
 	void writeIntConst(int value);
 
 	void writeStringConst(const std::string& str);
-
+	
 	bool isClassName(const std::string& name);
 
 	bool isBuiltInType(const std::string& type);
@@ -142,4 +145,6 @@ public:
 	bool isUnaryOp(char c);
 
 	void compileSubroutineCall();
+
+	void compileIdentifier();
 };

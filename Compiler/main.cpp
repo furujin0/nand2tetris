@@ -9,12 +9,17 @@ int main(int argc, char** argv) {
 	
 	std::string sourceName = targetName + ".jack";
 	std::string intermediateName = targetName + "_temp.txt";
+	std::string outputName = targetName + ".xml";
+
 	Formatter formatter;
 	formatter.eraseComments(sourceName, intermediateName);
-	std::string outputName = targetName + ".vm";
 
+	Tokenizer t(intermediateName);
+	while (t.hasMoreTokens()) {
+		t.advance();
+		std::cout << t.token() << std::endl;
+	}
 	CompileEngine engine(intermediateName, outputName);
-	
 	engine.compileClass();
 
 	return 0;
