@@ -33,5 +33,6 @@ enum class KEYWORD {
 	NULL_WORD,
 	THIS,
 	VOID,
-	BOOLEAN
+	BOOLEAN,
+	CHAR
 };

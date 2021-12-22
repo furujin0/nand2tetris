@@ -53,11 +53,19 @@ void Tokenizer::advance() {
 	char c;
 	do{
 		c = _ifs.get();
-	} while (c == ' ' || c == '\n' || c == '\r');
+	} while (c == ' ' || c == '\n' || c == '\r'|| c=='\r\n' || c == '\n\r' || c==9);
+	//std::cout << c << "(int: " << static_cast<int>(c) << ")" << std::endl;
 	if (c == std::char_traits<char>::eof()) {
 		return;
 	}
-	if (symbolSet.find(c) != symbolSet.end()) {
+	if (isSymbol(c)) {
+		_token.append(1, c);
+	}
+	else if ( c == '"') {
+		do {
+			_token.append(1, c);
+			c = _ifs.get();
+		} while (c != '"');
 		_token.append(1, c);
 	}
 	else {
@@ -267,6 +275,8 @@ void CompileEngine::compileSubroutine() {
 	_tokenizer.advance();
 
 	//subroutine body
+	_ofs << std::string(indent, ' ') << "<subroutineBody>" << std::endl;
+	indent += 2;
 	writeSymbol(_tokenizer.symbol());//{
 	_tokenizer.advance();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::VAR) {
@@ -276,7 +286,8 @@ void CompileEngine::compileSubroutine() {
 	writeSymbol(_tokenizer.symbol());
 	_tokenizer.advance();
 	indent -= 2;
-
+	_ofs << std::string(indent, ' ') << "</subroutineBody>" << std::endl;
+	indent -= 2;
 	_ofs << std::string(indent, ' ') << "</subroutineDec>" << std::endl;
 }
 
@@ -333,7 +344,20 @@ void CompileEngine::compileParameterList() {
 }
 
 void CompileEngine::writeSymbol(const char c) {
-	_ofs << std::string(indent, ' ') << "<symbol> " << c << " </symbol>" << std::endl;
+	std::string sym;
+	switch (c) {
+	case '<':
+		sym = "&lt;"; break;
+	case '>':
+		sym = "&gt;"; break;
+	case '"':
+		sym = "&quot;"; break;
+	case '&':
+		sym = "&amp;"; break;
+	default:
+		sym = std::string(1, c);
+	}
+	_ofs << std::string(indent, ' ') << "<symbol> " << sym << " </symbol>" << std::endl;
 }
 
 void CompileEngine::writeKeyword(KEYWORD keyword) {
@@ -380,6 +404,8 @@ void CompileEngine::writeKeyword(KEYWORD keyword) {
 		keywordStr = "void"; break;
 	case KEYWORD::BOOLEAN:
 		keywordStr = "boolean"; break;
+	case KEYWORD::CHAR:
+		keywordStr = "char"; break;
 	default:
 		break;
 	}
@@ -502,6 +528,7 @@ void CompileEngine::compileWhile() {
 	_tokenizer.advance();
 	compileStatements();
 	writeSymbol(_tokenizer.symbol());
+	_tokenizer.advance();
 	indent -= 2;
 	_ofs << std::string(indent, ' ') << "</whileStatement>" << std::endl;
 }

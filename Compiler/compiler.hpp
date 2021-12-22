@@ -36,11 +36,12 @@ class Tokenizer {
 		std::make_pair(std::string("null"), KEYWORD::NULL_WORD),
 		std::make_pair(std::string("this"), KEYWORD::THIS),
 		std::make_pair(std::string("void"), KEYWORD::VOID),
-		std::make_pair(std::string("boolean"), KEYWORD::BOOLEAN)
+		std::make_pair(std::string("boolean"), KEYWORD::BOOLEAN),
+		std::make_pair(std::string("char"), KEYWORD::CHAR)
 	};
 
 	std::set<char> symbolSet{
-		'{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-'
+		'{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~'
 	};
 
 	std::ifstream _ifs;
@@ -147,4 +148,6 @@ public:
 	void compileSubroutineCall();
 
 	void compileIdentifier();
+
+	void compileSubroutineBody();
 };
