@@ -10,7 +10,7 @@ CompileEngine::CompileEngine(
 {
 	_ofs.open(outputName);
 }
-/**/
+
 void CompileEngine::compileClass() {
 	_ofs << "<class>" << std::endl;
 	indent += 2;
