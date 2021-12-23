@@ -18,6 +18,8 @@ add_executable(
     tokenizer.cpp
     symbolTable.hpp
     symbolTable.cpp
+    vmWriter.hpp
+    vmWriter.cpp
     main.cpp
     privdef.hpp
 )
