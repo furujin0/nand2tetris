@@ -36,3 +36,12 @@ enum class KEYWORD {
 	BOOLEAN,
 	CHAR
 };
+
+enum class ID_TYPE {
+	STATIC,
+	FIELD,
+	ARG,
+	VAR,
+	NONE
+};
+

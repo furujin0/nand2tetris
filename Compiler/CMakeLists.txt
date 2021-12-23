@@ -10,6 +10,14 @@ add_executable(
     Compiler
     compiler.hpp
     compiler.cpp
+    formatter.hpp
+    formatter.cpp
+    compileEngine.hpp
+    compileEngine.cpp
+    tokenizer.hpp
+    tokenizer.cpp
+    symbolTable.hpp
+    symbolTable.cpp
     main.cpp
     privdef.hpp
 )
