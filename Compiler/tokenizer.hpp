@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include "privdef.hpp"

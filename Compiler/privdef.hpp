@@ -1,9 +1,5 @@
 #pragma once
 
-#include <set>
-#include <string>
-#include <unordered_map>
-
 enum class TOKEN_TYPE{
 	KEYWORD,
 	SYMBOL,
@@ -37,7 +33,7 @@ enum class KEYWORD {
 	CHAR
 };
 
-enum class ID_TYPE {
+enum class ID_KIND {
 	STATIC,
 	FIELD,
 	ARG,
