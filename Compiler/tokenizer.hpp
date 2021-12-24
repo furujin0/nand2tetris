@@ -61,6 +61,8 @@ public:
 
 	std::string stringVal() const;
 
+	std::string type() const;
+
 	bool isNonTokenChar(char c) const;
 
 	bool isSymbol(char c) const;

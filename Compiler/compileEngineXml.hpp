@@ -3,13 +3,11 @@
 #include <fstream>
 #include <string>
 #include <unordered_set>
-#include "formatter.hpp"
 #include "privdef.hpp"
 #include "tokenizer.hpp"
 
 class CompileEngine {
 	Tokenizer _tokenizer;
-	Formatter _formatter;
 	std::ofstream _ofs;
 	std::unordered_set<std::string> classSet;
 	int indent = 0;

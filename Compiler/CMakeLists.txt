@@ -23,3 +23,21 @@ add_executable(
     main.cpp
     privdef.hpp
 )
+
+add_executable(
+    CompilerXml
+    compiler.hpp
+    compiler.cpp
+    formatter.hpp
+    formatter.cpp
+    compileEngineXml.hpp
+    compileEngineXml.cpp
+    tokenizer.hpp
+    tokenizer.cpp
+    symbolTable.hpp
+    symbolTable.cpp
+    vmWriter.hpp
+    vmWriter.cpp
+    main.cpp
+    privdef.hpp
+)

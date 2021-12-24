@@ -33,11 +33,17 @@ enum class KEYWORD {
 	CHAR
 };
 
-enum class ID_KIND {
+enum class KIND {
 	STATIC,
 	FIELD,
 	ARG,
 	VAR,
 	NONE
+};
+
+enum class SUBROUTINE_TYPE {
+	FUNCTION,
+	METHOD,
+	CONSTRUCTOR
 };
 

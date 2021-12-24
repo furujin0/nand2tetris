@@ -5,13 +5,21 @@
 #include <unordered_set>
 #include "formatter.hpp"
 #include "privdef.hpp"
+#include "symbolTable.hpp"
 #include "tokenizer.hpp"
+#include "vmWriter.hpp"
+
 
 class CompileEngine {
 	Tokenizer _tokenizer;
-	Formatter _formatter;
+	SymbolTable _classSymbols;
+	SymbolTable _subroutineSymbols;
+	VmWriter _writer;
 	std::ofstream _ofs;
 	std::unordered_set<std::string> classSet;
+	std::string _className;
+	std::string _subroutineName;
+	int _numArgs;
 	int indent = 0;
 
 public:

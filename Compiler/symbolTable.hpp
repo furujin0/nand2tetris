@@ -7,8 +7,14 @@
 struct IdInfo {
 	std::string name;
 	std::string type;
-	ID_KIND kind;
+	KIND kind;
 	int index;
+};
+
+struct FuncInfo {
+	std::string name;
+	int numArgs;
+	int numLocals;
 };
 
 class SymbolTable {
@@ -22,14 +28,16 @@ public:
 	void define(
 		const std::string& name,
 		const std::string& type,
-		ID_KIND kind
+		KIND kind
 	);
 
-	int varCount(ID_KIND kind) const;
+	int varCount(KIND kind) const;
 
-	ID_KIND kindOf(const std::string& name) const;
+	KIND kindOf(const std::string& name) const;
 
 	std::string typeOf(const std::string& name) const;
 
 	int indexOf(const std::string& name) const;
+
+	bool isDefined(const std::string& name) const;
 };

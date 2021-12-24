@@ -125,6 +125,7 @@ std::string Tokenizer::stringVal() const {
 	return std::move(std::string(_token.begin() + 1, _token.end() - 1));
 }
 
+
 bool Tokenizer::isNonTokenChar(char c) const {
 	return
 		c == ' '

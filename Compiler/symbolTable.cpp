@@ -3,7 +3,7 @@
 void SymbolTable::define(
 	const std::string& name,
 	const std::string& type,
-	ID_KIND kind
+	KIND kind
 ){
 	IdInfo info{ name, type, kind, _next_idx };
 	_table.insert(std::make_pair(name,  info));
@@ -15,7 +15,7 @@ void SymbolTable::startSubroutine() {
 	_next_idx = 0;
 }
 
-int SymbolTable::varCount(ID_KIND kind) const {
+int SymbolTable::varCount(KIND kind) const {
 	int count = 0;
 	for (auto&& var : _table) {
 		if (var.second.kind == kind) {
@@ -25,7 +25,7 @@ int SymbolTable::varCount(ID_KIND kind) const {
 	return count;
 }
 
-ID_KIND SymbolTable::kindOf(const std::string& name) const {
+KIND SymbolTable::kindOf(const std::string& name) const {
 	return _table.at(name).kind;
 }
 
@@ -35,4 +35,8 @@ std::string SymbolTable::typeOf(const std::string& name) const {
 
 int SymbolTable::indexOf(const std::string& name) const {
 	return _table.at(name).index;
+}
+
+bool SymbolTable::isDefined(const std::string& name) const {
+	return _table.find(name) != _table.end();
 }
