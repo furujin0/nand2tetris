@@ -31,6 +31,32 @@ void VmWriter::writePush(SEG segment, int idx) {
 	_ofs << idx << std::endl;
 }
 
+void VmWriter::writePop(SEG segment, int idx) {
+	_ofs << "pop ";
+	switch (segment)
+	{
+	case SEG::CONST:
+		_ofs << "constant ";  break;
+	case SEG::ARG:
+		_ofs << "argument ";  break;
+	case SEG::LOCAL:
+		_ofs << "local "; break;
+	case SEG::STATIC:
+		_ofs << "static "; break;
+	case SEG::THIS:
+		_ofs << "this "; break;
+	case SEG::THAT:
+		_ofs << "that "; break;
+	case SEG::POINTER:
+		_ofs << "pointer "; break;
+	case SEG::TEMP:
+		_ofs << "temp "; break;
+	default:
+		break;
+	}
+	_ofs << idx << std::endl;
+}
+
 void VmWriter::writeArithmetic(CMD cmd) {
 	switch (cmd) {
 	case CMD::ADD:

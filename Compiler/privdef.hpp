@@ -44,6 +44,5 @@ enum class KIND {
 enum class SUBROUTINE_TYPE {
 	FUNCTION,
 	METHOD,
-	CONSTRUCTOR
 };
 

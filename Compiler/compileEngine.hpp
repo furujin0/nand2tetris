@@ -10,17 +10,24 @@
 #include "vmWriter.hpp"
 
 
+struct FuncInfo {
+	std::string name;
+	int numArgs;
+	int numLocals;
+	SUBROUTINE_TYPE type;
+};
+
 class CompileEngine {
 	Tokenizer _tokenizer;
 	SymbolTable _classSymbols;
 	SymbolTable _subroutineSymbols;
+	std::unordered_map<std::string, FuncInfo> _subroutines;
 	VmWriter _writer;
-	std::ofstream _ofs;
-	std::unordered_set<std::string> classSet;
 	std::string _className;
 	std::string _subroutineName;
-	int _numArgs;
-	int indent = 0;
+	int _ifCount = 0;
+	int _whileCount = 0;
+	int _numArgs = 0;
 
 public:
 	CompileEngine(
@@ -83,4 +90,6 @@ public:
 	void compileSymbol();
 
 	void compileKeyword();
+
+	void kind2seg(KIND kind, SEG& seg);
 };
