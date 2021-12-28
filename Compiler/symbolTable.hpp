@@ -15,8 +15,8 @@ struct IdInfo {
 class SymbolTable {
 
 	int _next_idx = 0;
-	std::unordered_map<std::string, IdInfo> _table;
 public:
+	std::unordered_map<std::string, IdInfo> _table;
 
 	void startSubroutine();
 

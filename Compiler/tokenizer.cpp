@@ -1,3 +1,4 @@
+#include <iostream>
 #include "tokenizer.hpp"
 
 bool Tokenizer::hasMoreTokens() const {
@@ -37,12 +38,12 @@ void Tokenizer::advance() {
 			}
 		} while (true);
 	}
+	std::cout << _token << " (" << type2string() << ")" << std::endl;
 }
 
 Tokenizer::Tokenizer(const std::string& inputName)
 	:_inputName(inputName) {
 	_ifs.open(inputName);
-
 }
 
 std::string Tokenizer::token() {
@@ -133,4 +134,25 @@ bool Tokenizer::isNonTokenChar(char c) const {
 		|| c == '\r'
 		|| isSymbol(c)
 		|| c == std::char_traits<char>::eof();
+}
+
+std::string Tokenizer::type2string() const{
+	switch (tokenType())
+	{
+	case TOKEN_TYPE::IDENTIFIER:
+		return "identifier"; break;
+	case TOKEN_TYPE::KEYWORD:
+		return "keyword"; break;
+	case TOKEN_TYPE::SYMBOL:
+		return "symbol"; break;
+	case TOKEN_TYPE::INT_CONST:
+		return "int"; break;
+	case TOKEN_TYPE::STRING_CONST:
+		return "string"; break;
+	case TOKEN_TYPE::NON_TOKEN:
+		break;
+	default:
+		break;
+	}
+
 }

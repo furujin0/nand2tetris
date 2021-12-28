@@ -28,6 +28,7 @@ class CompileEngine {
 	int _ifCount = 0;
 	int _whileCount = 0;
 	int _numArgs = 0;
+	int indent = 0;
 
 public:
 	CompileEngine(

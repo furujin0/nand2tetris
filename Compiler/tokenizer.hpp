@@ -61,7 +61,7 @@ public:
 
 	std::string stringVal() const;
 
-	std::string type() const;
+	std::string type2string() const;
 
 	bool isNonTokenChar(char c) const;
 

@@ -54,6 +54,8 @@ void CompileEngine::compileClassVarDec() {
 }
 
 void CompileEngine::compileSubroutine() {
+	std::cout << "<subroutineDec>" << std::endl;
+	indent += 2;
 	_subroutineSymbols.startSubroutine();
 	_ifCount = 0;
 	_whileCount = 0;
@@ -81,7 +83,10 @@ void CompileEngine::compileSubroutine() {
 			(isMethod ? SUBROUTINE_TYPE::METHOD : SUBROUTINE_TYPE::FUNCTION)))
 	);
 	compileStatements();
+	_writer.writeReturn();
 	_tokenizer.advance();
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</subroutineDec>" << std::endl;
 }
 
 void CompileEngine::compileVarDec() {
@@ -98,13 +103,24 @@ void CompileEngine::compileVarDec() {
 
 
 void CompileEngine::compileParameterList() {
-	while (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL && _tokenizer.symbol() != ')')
+	std::cout << std::string(indent, '-')<< "<parameter list>" << std::endl;
+	indent += 2;
+
+	while (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ')')
 	{
 		auto type = _tokenizer.identifier();
-		_tokenizer.advance();
+		_tokenizer.advance(); // move from type to name
 		_subroutineSymbols.define(_tokenizer.identifier(), type, KIND::ARG);
-		_tokenizer.advance();
+		_tokenizer.advance();//move from name to ','
+		if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == ')') {
+			break;
+		}
+		else {
+			_tokenizer.advance();
+		}
 	}
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</parameter list>" << std::endl;
 }
 
 
@@ -205,11 +221,13 @@ void CompileEngine::compileIf() {
 }
 
 void CompileEngine::compileWhile() {
+	std::cout << std::string(indent, '-') << "<whileStatement>" << std::endl;
+	indent += 2;
 	auto whileLabel = _subroutineName + "_while_" + std::to_string(_whileCount);
 	auto returnLabel = _subroutineName + "_return_while_" + std::to_string(_whileCount);
 	_whileCount++;
-	_tokenizer.advance();
-	_tokenizer.advance();
+	_tokenizer.advance();// move from while to '('
+	_tokenizer.advance(); //move from '(' to expression
 	_writer.writeLabel(whileLabel);
 	compileExpression();
 	_writer.writeArithmetic(CMD::NEG);
@@ -220,12 +238,20 @@ void CompileEngine::compileWhile() {
 	_writer.writeGoto(whileLabel);
 	_writer.writeLabel(returnLabel);
 	_tokenizer.advance();
+	indent -= 2;
+
+	std::cout << std::string(indent, '-') << "</whileStatement>" << std::endl;
 }
 
 void CompileEngine::compileDo() {
+	std::cout << std::string(indent, '-') << "<doStatement>" << std::endl;
+	indent += 2;
+
 	_tokenizer.advance();
 	compileSubroutineCall();
 	_tokenizer.advance(); // move from ';'
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</doStatement>" << std::endl;
 }
 
 void CompileEngine::compileSubroutineCall() {
@@ -295,7 +321,8 @@ bool CompileEngine::isUnaryOp(char c) {
 }
 
 void CompileEngine::compileTerm() {
-
+	std::cout << std::string(indent, '-') << "<term>" << std::endl;
+	indent += 2;
 	switch (_tokenizer.tokenType()) {
 	case TOKEN_TYPE::INT_CONST:
 		_writer.writePush(SEG::CONST, _tokenizer.intVal());
@@ -350,7 +377,15 @@ void CompileEngine::compileTerm() {
 
 		if (!_subroutineSymbols.isDefined(_tokenizer.identifier()) && !_classSymbols.isDefined(_tokenizer.identifier())) // subroutine
 		{
-			compileSubroutine();
+			for (auto&& s : _subroutineSymbols._table) {
+				std::cout << s.second.name << " : " << s.second.type << std::endl;
+			}
+			for (auto&& s : _classSymbols._table) {
+				std::cout << s.second.name << " : " << s.second.type << std::endl;
+			}
+			std::cout << _subroutineSymbols.varCount(KIND::ARG) << ", " << _classSymbols.varCount(KIND::ARG) << std::endl;;
+			std::cout << "... identifier not defined. deduced to be a subroutine." << std::endl;
+			compileSubroutineCall();
 		}	
 		else // varName or varName[expression]
 		{
@@ -370,6 +405,7 @@ void CompileEngine::compileTerm() {
 			}
 			_writer.writePush(seg, index);
 			_tokenizer.advance(); // move from name
+			std::cout << "moved from varName" << std::endl;
 			if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '[') { // array-type variable
 				_tokenizer.advance();
 				compileExpression();
@@ -384,9 +420,14 @@ void CompileEngine::compileTerm() {
 	default:
 		break;
 	}
+	indent -= 2;
+
+	std::cout << std::string(indent, '-') << "</term>" << std::endl;
 }
 
 void CompileEngine::compileExpression() {
+	std::cout << std::string(indent, '-') << "<expresion>" << std::endl;
+	indent += 2;
 
 	compileTerm();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && isOp(_tokenizer.symbol())) {
@@ -417,9 +458,14 @@ void CompileEngine::compileExpression() {
 			break;
 		}
 	}
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</expression>" << std::endl;
 }
 
 void CompileEngine::compileExpressionList() {
+	std::cout << std::string(indent, '-') << "<expressionList>" << std::endl;
+	indent += 2;
+
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ')') {
 		_numArgs++;
 		compileExpression();
@@ -429,6 +475,8 @@ void CompileEngine::compileExpressionList() {
 			compileExpression();
 		}
 	}
+	indent += 2;
+	std::cout << std::string(indent, '-') << "</expressionList>" << std::endl;
 }
 
 
