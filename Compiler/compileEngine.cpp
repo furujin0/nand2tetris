@@ -55,6 +55,7 @@ void CompileEngine::compileClassVarDec() {
 
 void CompileEngine::compileSubroutine() {
 	std::cout << "<subroutineDec>" << std::endl;
+	_subroutineName.clear();
 	indent += 2;
 	_subroutineSymbols.startSubroutine();
 	_ifCount = 0;
@@ -63,6 +64,7 @@ void CompileEngine::compileSubroutine() {
 	_tokenizer.advance(); // move to  return type ( In Jack, every function returns value of 16bit  )
 	_tokenizer.advance(); // move to subroutineName
 	_subroutineName = _className + "." + _tokenizer.identifier();
+	std::cout << "_subroutineName:" << _subroutineName << std::endl;
 	_tokenizer.advance(); // move to symbol '('
 	_tokenizer.advance(); // move to parameterList
 	compileParameterList(); // .
@@ -73,6 +75,14 @@ void CompileEngine::compileSubroutine() {
 	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::VAR) {
 		compileVarDec();
 	}
+	//print variables definitions
+	for (auto&& s : _subroutineSymbols._table) {
+		std::cout << s.second.name << " : " << s.second.type << std::endl;
+	}
+	for (auto&& s : _classSymbols._table) {
+		std::cout << s.second.name << " : " << s.second.type << std::endl;
+	}
+
 	_writer.writeFunction(_subroutineName, _subroutineSymbols.varCount(KIND::VAR));
 	_subroutines.insert(std::make_pair(
 		_subroutineName,
@@ -83,7 +93,6 @@ void CompileEngine::compileSubroutine() {
 			(isMethod ? SUBROUTINE_TYPE::METHOD : SUBROUTINE_TYPE::FUNCTION)))
 	);
 	compileStatements();
-	_writer.writeReturn();
 	_tokenizer.advance();
 	indent -= 2;
 	std::cout << std::string(indent, '-') << "</subroutineDec>" << std::endl;
@@ -202,7 +211,7 @@ void CompileEngine::compileIf() {
 	_tokenizer.advance();
 	_tokenizer.advance();
 	compileExpression();
-	_writer.writeArithmetic(CMD::NEG);
+	_writer.writeArithmetic(CMD::NOT);
 	_writer.writeIf(false_label);
 	_tokenizer.advance();
 	_tokenizer.advance();
@@ -230,7 +239,7 @@ void CompileEngine::compileWhile() {
 	_tokenizer.advance(); //move from '(' to expression
 	_writer.writeLabel(whileLabel);
 	compileExpression();
-	_writer.writeArithmetic(CMD::NEG);
+	_writer.writeArithmetic(CMD::NOT);
 	_tokenizer.advance();
 	_tokenizer.advance();
 	_writer.writeIf(returnLabel);
@@ -308,6 +317,7 @@ void CompileEngine::compileReturn() {
 	else {
 		_writer.writePush(SEG::CONST, 0);
 	}
+	_writer.writePop(SEG::ARG, 0);
 	_writer.writeReturn();
 	_tokenizer.advance();
 }
@@ -377,14 +387,7 @@ void CompileEngine::compileTerm() {
 
 		if (!_subroutineSymbols.isDefined(_tokenizer.identifier()) && !_classSymbols.isDefined(_tokenizer.identifier())) // subroutine
 		{
-			for (auto&& s : _subroutineSymbols._table) {
-				std::cout << s.second.name << " : " << s.second.type << std::endl;
-			}
-			for (auto&& s : _classSymbols._table) {
-				std::cout << s.second.name << " : " << s.second.type << std::endl;
-			}
-			std::cout << _subroutineSymbols.varCount(KIND::ARG) << ", " << _classSymbols.varCount(KIND::ARG) << std::endl;;
-			std::cout << "... identifier not defined. deduced to be a subroutine." << std::endl;
+
 			compileSubroutineCall();
 		}	
 		else // varName or varName[expression]
@@ -405,7 +408,6 @@ void CompileEngine::compileTerm() {
 			}
 			_writer.writePush(seg, index);
 			_tokenizer.advance(); // move from name
-			std::cout << "moved from varName" << std::endl;
 			if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '[') { // array-type variable
 				_tokenizer.advance();
 				compileExpression();

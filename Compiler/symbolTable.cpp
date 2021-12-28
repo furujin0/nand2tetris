@@ -5,14 +5,12 @@ void SymbolTable::define(
 	const std::string& type,
 	KIND kind
 ){
-	IdInfo info{ name, type, kind, _next_idx };
+	IdInfo info{ name, type, kind, varCount(kind)};
 	_table.insert(std::make_pair(name,  info));
-	_next_idx++;
 }
 
 void SymbolTable::startSubroutine() {
 	_table.clear();
-	_next_idx = 0;
 }
 
 int SymbolTable::varCount(KIND kind) const {
