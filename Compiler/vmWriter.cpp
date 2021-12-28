@@ -94,6 +94,18 @@ void VmWriter::writeIf(const std::string& label) {
 	_ofs << "if-goto " << label << std::endl;
 }
 
+void VmWriter::writeCall(const std::string& name, int numArgs) {
+	_ofs << "call " << name << " " << numArgs << std::endl;
+}
+
+void VmWriter::writeFunction(const std::string& name, int numLocals) {
+	_ofs << "function " << name << " " << numLocals << std::endl;;
+}
+
+void VmWriter::writeReturn() {
+	_ofs << "return" << std::endl;
+}
+
 void VmWriter::close() {
 	_ofs.close();
 }

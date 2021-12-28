@@ -11,11 +11,6 @@ struct IdInfo {
 	int index;
 };
 
-struct FuncInfo {
-	std::string name;
-	int numArgs;
-	int numLocals;
-};
 
 class SymbolTable {
 

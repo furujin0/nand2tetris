@@ -38,6 +38,6 @@ add_executable(
     symbolTable.cpp
     vmWriter.hpp
     vmWriter.cpp
-    main.cpp
+    mainXml.cpp
     privdef.hpp
 )
