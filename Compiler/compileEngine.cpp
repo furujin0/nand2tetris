@@ -138,7 +138,9 @@ bool CompileEngine::isBuiltInType(const std::string& type) {
 }
 
 void CompileEngine::compileStatements() {
-
+	std::cout << std::string(indent, '-') << "<satements>" << std::endl;
+	indent += 2;
+		
 	bool hasMoreStatements = true;
 	while (hasMoreStatements) {
 		if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD) {
@@ -154,27 +156,29 @@ void CompileEngine::compileStatements() {
 			case KEYWORD::RETURN:
 				compileReturn(); break;
 			default:
+				std::cout << "No statements remain. The current token is:" << _tokenizer.token() << std::endl;
 				hasMoreStatements = false; break;
 			}
 		}
 		else {
+			std::cout << "No statements remain. The current token is:" << _tokenizer.token() << std::endl;
+
 			hasMoreStatements = false;
 		}
 	}
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</statements>" << std::endl;
 }
 
 void CompileEngine::compileLet() {
+	std::cout << std::string(indent, '-') << "<letStatement>" << std::endl;
+	indent += 2;
 	//determine varName and its kind
-	_tokenizer.advance(); // move to varName;
+	_tokenizer.advance(); // move from "let" to varName;
 	auto varName = _tokenizer.identifier();
-	_tokenizer.advance();
-	_tokenizer.advance(); // move from '=' to expression
-	compileExpression();
-
 	auto kind = (_subroutineSymbols.isDefined(varName) ? _subroutineSymbols.kindOf(varName) : _classSymbols.kindOf(varName));
 	auto type = (_subroutineSymbols.isDefined(varName) ? _subroutineSymbols.typeOf(varName) : _classSymbols.typeOf(varName));
-	auto index = (_subroutineSymbols.isDefined(varName) ? _subroutineSymbols.indexOf(varName) : _classSymbols.indexOf(varName) );
-
+	auto index = (_subroutineSymbols.isDefined(varName) ? _subroutineSymbols.indexOf(varName) : _classSymbols.indexOf(varName));
 	SEG seg;
 	switch (kind) {
 	case KIND::STATIC:
@@ -187,24 +191,33 @@ void CompileEngine::compileLet() {
 		seg = SEG::LOCAL; break;
 	}
 
-	if (_tokenizer.symbol() == '[') { // variable is array-type
-		_writer.writePush(seg, index);
+	_tokenizer.advance();// move from varName to a symbol
+	if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '[') {
 		_tokenizer.advance();//move from '[' to expression
 		compileExpression();
+		_writer.writePush(seg, index);
 		_writer.writeArithmetic(CMD::ADD);
+		_writer.writePop(SEG::TEMP, 0);
+		_tokenizer.advance(); // move from ']' to '='
+		_tokenizer.advance(); // move from '=' to expression
+		compileExpression();
+		_writer.writePush(SEG::TEMP, 0);
 		_writer.writePop(SEG::POINTER, 1);
 		_writer.writePop(SEG::THAT, 0);
-		_tokenizer.advance(); // move expression to ']'
-		_tokenizer.advance(); //move from ']' to ';'
-		_writer.writePop(SEG::CONST, 0);
 	}
-	else { // variable is non-array type
+	else {
+		_tokenizer.advance(); //move from '=' to expresssion
+		compileExpression();
 		_writer.writePop(seg, index);
 	}
-	_tokenizer.advance(); //move from ';'
+	_tokenizer.advance();// move from ';'
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</letStatement>" << std::endl;
+
 }
 
 void CompileEngine::compileIf() {
+	
 	auto false_label = _subroutineName + "_false_" + std::to_string(_ifCount);
 	auto return_label = _subroutineName + "_return_if_" + std::to_string(_ifCount);
 	_ifCount++;
@@ -240,13 +253,13 @@ void CompileEngine::compileWhile() {
 	_writer.writeLabel(whileLabel);
 	compileExpression();
 	_writer.writeArithmetic(CMD::NOT);
-	_tokenizer.advance();
-	_tokenizer.advance();
+	_tokenizer.advance();//move from ')' to '{'
+	_tokenizer.advance();//move from '{' to statements
 	_writer.writeIf(returnLabel);
-	compileStatements();
+	compileStatements(); // move from statements to '}'
 	_writer.writeGoto(whileLabel);
 	_writer.writeLabel(returnLabel);
-	_tokenizer.advance();
+	_tokenizer.advance(); //move from '}'
 	indent -= 2;
 
 	std::cout << std::string(indent, '-') << "</whileStatement>" << std::endl;
@@ -267,11 +280,11 @@ void CompileEngine::compileSubroutineCall() {
 	_numArgs = 0;
 	auto firstName = _tokenizer.identifier();
 	std::string fullName;
-	_tokenizer.advance();
+	_tokenizer.advance(); // move to '.' (if another's subroutine) or '(' (if own subroutine)
 	if (_tokenizer.symbol() == '.') {// the subroutine of another class is called
 		_tokenizer.advance();
 		auto subroutineName = _tokenizer.identifier();
-		_tokenizer.advance(); //move from move to (
+		_tokenizer.advance(); //move from subroutineName to (
 		fullName = firstName + "." + subroutineName;
 		if (_subroutineSymbols.isDefined(firstName) || _classSymbols.isDefined(firstName)) { // the subroutine is method
 			_numArgs++;
@@ -409,11 +422,12 @@ void CompileEngine::compileTerm() {
 			_writer.writePush(seg, index);
 			_tokenizer.advance(); // move from name
 			if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '[') { // array-type variable
-				_tokenizer.advance();
+				_tokenizer.advance(); // move from '[' to expression
 				compileExpression();
 				_writer.writeArithmetic(CMD::ADD);
 				_writer.writePop(SEG::POINTER, 1);
 				_writer.writePush(SEG::THAT, 0);
+				_tokenizer.advance(); // move from ']'
 			}
 		}
 		break;
