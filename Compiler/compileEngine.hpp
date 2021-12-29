@@ -27,7 +27,6 @@ class CompileEngine {
 	std::string _subroutineName;
 	int _ifCount = 0;
 	int _whileCount = 0;
-	int _numArgs = 0;
 	int indent = 0;
 
 public:
@@ -62,7 +61,7 @@ public:
 
 	void compileTerm();
 
-	void compileExpressionList();
+	int compileExpressionList();
 
 	void writeKeyword(KEYWORD keyword);
 

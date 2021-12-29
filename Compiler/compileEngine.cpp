@@ -10,6 +10,7 @@ CompileEngine::CompileEngine(
 {}
 /**/
 void CompileEngine::compileClass() {
+
 	_tokenizer.advance(); //to class keyword
 	_tokenizer.advance(); // move to class name
 	
@@ -54,17 +55,21 @@ void CompileEngine::compileClassVarDec() {
 }
 
 void CompileEngine::compileSubroutine() {
-	std::cout << "<subroutineDec>" << std::endl;
+	std::cout << std::string(indent, '-') << "<subroutineDec>" << std::endl;
 	_subroutineName.clear();
 	indent += 2;
 	_subroutineSymbols.startSubroutine();
 	_ifCount = 0;
 	_whileCount = 0;
+	if (_tokenizer.keyWord() == KEYWORD::CONSTRUCTOR) {
+		_writer.writePush(SEG::CONST, _classSymbols.varCount(KIND::FIELD));
+		_writer.writeCall("Memory.alloc", 1);
+		_writer.writePop(SEG::POINTER, 0);
+	}
 	bool isMethod = (_tokenizer.keyWord() == KEYWORD::METHOD);
 	_tokenizer.advance(); // move to  return type ( In Jack, every function returns value of 16bit  )
 	_tokenizer.advance(); // move to subroutineName
 	_subroutineName = _className + "." + _tokenizer.identifier();
-	std::cout << "_subroutineName:" << _subroutineName << std::endl;
 	_tokenizer.advance(); // move to symbol '('
 	_tokenizer.advance(); // move to parameterList
 	compileParameterList(); // .
@@ -75,13 +80,13 @@ void CompileEngine::compileSubroutine() {
 	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::VAR) {
 		compileVarDec();
 	}
-	//print variables definitions
-	for (auto&& s : _subroutineSymbols._table) {
-		std::cout << s.second.name << " : " << s.second.type << std::endl;
-	}
-	for (auto&& s : _classSymbols._table) {
-		std::cout << s.second.name << " : " << s.second.type << std::endl;
-	}
+	////print variables definitions
+	//for (auto&& s : _subroutineSymbols._table) {
+	//	std::cout << s.second.name << " : " << s.second.type << std::endl;
+	//}
+	//for (auto&& s : _classSymbols._table) {
+	//	std::cout << s.second.name << " : " << s.second.type << std::endl;
+	//}
 
 	_writer.writeFunction(_subroutineName, _subroutineSymbols.varCount(KIND::VAR));
 	_subroutines.insert(std::make_pair(
@@ -92,6 +97,10 @@ void CompileEngine::compileSubroutine() {
 			_subroutineSymbols.varCount(KIND::VAR), 
 			(isMethod ? SUBROUTINE_TYPE::METHOD : SUBROUTINE_TYPE::FUNCTION)))
 	);
+	if (isMethod) { // set this pointer to the object
+		_writer.writePush(SEG::ARG, 0);
+		_writer.writePop(SEG::POINTER, 0);
+	}
 	compileStatements();
 	_tokenizer.advance();
 	indent -= 2;
@@ -99,6 +108,8 @@ void CompileEngine::compileSubroutine() {
 }
 
 void CompileEngine::compileVarDec() {
+	std::cout << std::string(indent, '-') << "<varDec>" << std::endl;
+	indent += 2;
 	_tokenizer.advance(); //move from var to type
 	//now the current token is type
 	auto type = _tokenizer.identifier();
@@ -108,6 +119,8 @@ void CompileEngine::compileVarDec() {
 		_tokenizer.advance(); // move to a separator ',' or ';'
 	} while (_tokenizer.symbol() != ';');
 	_tokenizer.advance();
+	indent -= 2;
+	std::cout << std::string(indent, '-') << "</varDec>" << std::endl;
 }
 
 
@@ -197,12 +210,12 @@ void CompileEngine::compileLet() {
 		compileExpression();
 		_writer.writePush(seg, index);
 		_writer.writeArithmetic(CMD::ADD);
-		_writer.writePop(SEG::TEMP, 0);
 		_tokenizer.advance(); // move from ']' to '='
 		_tokenizer.advance(); // move from '=' to expression
 		compileExpression();
-		_writer.writePush(SEG::TEMP, 0);
+		_writer.writePop(SEG::TEMP, 0);
 		_writer.writePop(SEG::POINTER, 1);
+		_writer.writePush(SEG::TEMP, 0);
 		_writer.writePop(SEG::THAT, 0);
 	}
 	else {
@@ -277,17 +290,19 @@ void CompileEngine::compileDo() {
 }
 
 void CompileEngine::compileSubroutineCall() {
-	_numArgs = 0;
 	auto firstName = _tokenizer.identifier();
 	std::string fullName;
+	int numArgs = 0;
 	_tokenizer.advance(); // move to '.' (if another's subroutine) or '(' (if own subroutine)
 	if (_tokenizer.symbol() == '.') {// the subroutine of another class is called
 		_tokenizer.advance();
 		auto subroutineName = _tokenizer.identifier();
 		_tokenizer.advance(); //move from subroutineName to (
-		fullName = firstName + "." + subroutineName;
+	
 		if (_subroutineSymbols.isDefined(firstName) || _classSymbols.isDefined(firstName)) { // the subroutine is method
-			_numArgs++;
+			auto className = (_subroutineSymbols.isDefined(firstName) ? _subroutineSymbols.typeOf(firstName) : _classSymbols.typeOf(firstName));
+			fullName = className + "." + subroutineName;
+			numArgs++;
 			auto idx = (_subroutineSymbols.isDefined(firstName) ? _subroutineSymbols.indexOf(firstName) : _classSymbols.indexOf(firstName));
 			auto kind = (_subroutineSymbols.isDefined(firstName) ? _subroutineSymbols.kindOf(firstName) : _classSymbols.kindOf(firstName));
 			auto type  = (_subroutineSymbols.isDefined(firstName) ? _subroutineSymbols.typeOf(firstName) : _classSymbols.typeOf(firstName));
@@ -305,21 +320,24 @@ void CompileEngine::compileSubroutineCall() {
 				break;
 			}
 			_writer.writePush(seg, idx);
+
 		}
-		//else the subroutine is function
+		else {//else the subroutine is function
+			fullName = firstName + "." + subroutineName;
+		}
 	}
 	else { // a subroutine of the own class is called tokenizer.token should be '('
 		fullName = _className + "." + firstName;
-		if (_subroutines.find(firstName)->second.type == SUBROUTINE_TYPE::METHOD) { // the subroutine is method
-			_numArgs++;
+		if (_subroutines.find(fullName)->second.type == SUBROUTINE_TYPE::METHOD) { // the subroutine is method
+			numArgs++;
 			_writer.writePush(SEG::POINTER, 0);
 		}
 	}
 
 	_tokenizer.advance(); //move from ( to expressionList
-	compileExpressionList();
+	numArgs += compileExpressionList();
 	_tokenizer.advance(); // move from ')' 
-	_writer.writeCall(fullName, _numArgs);
+	_writer.writeCall(fullName, numArgs);
 }
 
 void CompileEngine::compileReturn() {
@@ -330,7 +348,6 @@ void CompileEngine::compileReturn() {
 	else {
 		_writer.writePush(SEG::CONST, 0);
 	}
-	_writer.writePop(SEG::ARG, 0);
 	_writer.writeReturn();
 	_tokenizer.advance();
 }
@@ -403,11 +420,12 @@ void CompileEngine::compileTerm() {
 
 			compileSubroutineCall();
 		}	
-		else // varName or varName[expression]
+		else // varName or varName[expression] or varName.method
 		{
 			auto name = _tokenizer.identifier();
 			auto index = _subroutineSymbols.isDefined(name) ? _subroutineSymbols.indexOf(name) : _classSymbols.indexOf(name);
 			auto kind = _subroutineSymbols.isDefined(name) ? _subroutineSymbols.kindOf(name) : _classSymbols.kindOf(name);
+			auto type = _subroutineSymbols.isDefined(name) ? _subroutineSymbols.typeOf(name) : _classSymbols.typeOf(name);
 			SEG seg;
 			switch (kind) {
 			case KIND::STATIC:
@@ -428,6 +446,16 @@ void CompileEngine::compileTerm() {
 				_writer.writePop(SEG::POINTER, 1);
 				_writer.writePush(SEG::THAT, 0);
 				_tokenizer.advance(); // move from ']'
+			}
+			else if (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == '.') { // given that field is private, this must be varName.method
+				_tokenizer.advance(); // move from . to methodName;
+				
+				std::string methodName = _tokenizer.identifier();
+				_tokenizer.advance(); // move from methodName to '('
+				_tokenizer.advance(); //move from ( to expressionList
+				int numArgs = compileExpressionList();
+				_tokenizer.advance(); // move from ')' 
+				_writer.writeCall(type + "." + methodName, numArgs + 1);
 			}
 		}
 		break;
@@ -478,21 +506,23 @@ void CompileEngine::compileExpression() {
 	std::cout << std::string(indent, '-') << "</expression>" << std::endl;
 }
 
-void CompileEngine::compileExpressionList() {
+int CompileEngine::compileExpressionList() {
 	std::cout << std::string(indent, '-') << "<expressionList>" << std::endl;
 	indent += 2;
 
+	int numExp = 0;
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ')') {
-		_numArgs++;
+		numExp++;
 		compileExpression();
 		while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && _tokenizer.symbol() == ',') {
-			_numArgs++;
+			numExp++;
 			_tokenizer.advance();
 			compileExpression();
 		}
 	}
-	indent += 2;
+	indent -= 2;
 	std::cout << std::string(indent, '-') << "</expressionList>" << std::endl;
+	return numExp;
 }
 
 
