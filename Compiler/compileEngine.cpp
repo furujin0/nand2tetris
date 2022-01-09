@@ -8,7 +8,38 @@ CompileEngine::CompileEngine(
 	const std::string& outputName
 ) :_tokenizer(inputName), _writer(outputName)
 {}
-/**/
+
+void CompileEngine::createSubroutineTable() {
+	while (_tokenizer.hasMoreTokens()) {
+		_tokenizer.advance();
+		if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD()) {
+			auto keyword = _tokenizer.keyWord();
+			if (keyword == KEYWORD::CONSTRUCTOR
+				|| keyword == KEYWORD::FUNCTION
+				|| keyword == KEYWORD::METHOD)
+			{
+				SUBROUTINE_TYPE func_type;
+				switch (keyword) {
+				case KEYWORD::CONSTRUCTOR:
+					func_type = SUBROUTINE_TYPE::CONSTRUCTOR; break;
+				case KEYWORD::FUNCTION:
+					func_type = SUBROUTINE_TYPE::FUNCTION; break;
+				case KEYWORD::METHOD:
+					func_type = SUBROUTINE_TYPE::METHOD; break;
+				default:
+					break;
+				}
+				_tokenizer.advance();
+				auto return_type = _tokenizer.identifier();
+				_tokenizer.advance();
+				auto name = _tokenizer.identifier();
+				_subroutines.insert(std::make_pair(name, func_type));
+			}
+		}
+	}
+	_tokenizer.reset();
+}
+
 void CompileEngine::compileClass() {
 
 	_tokenizer.advance(); //to class keyword
@@ -61,12 +92,9 @@ void CompileEngine::compileSubroutine() {
 	_subroutineSymbols.startSubroutine();
 	_ifCount = 0;
 	_whileCount = 0;
-	if (_tokenizer.keyWord() == KEYWORD::CONSTRUCTOR) {
-		_writer.writePush(SEG::CONST, _classSymbols.varCount(KIND::FIELD));
-		_writer.writeCall("Memory.alloc", 1);
-		_writer.writePop(SEG::POINTER, 0);
-	}
+
 	bool isMethod = (_tokenizer.keyWord() == KEYWORD::METHOD);
+	auto func_type = _tokenizer.keyWord();
 	_tokenizer.advance(); // move to  return type ( In Jack, every function returns value of 16bit  )
 	_tokenizer.advance(); // move to subroutineName
 	_subroutineName = _className + "." + _tokenizer.identifier();
@@ -89,16 +117,13 @@ void CompileEngine::compileSubroutine() {
 	//}
 
 	_writer.writeFunction(_subroutineName, _subroutineSymbols.varCount(KIND::VAR));
-	_subroutines.insert(std::make_pair(
-		_subroutineName,
-		FuncInfo(
-			_subroutineName,
-			_subroutineSymbols.varCount(KIND::ARG), 
-			_subroutineSymbols.varCount(KIND::VAR), 
-			(isMethod ? SUBROUTINE_TYPE::METHOD : SUBROUTINE_TYPE::FUNCTION)))
-	);
 	if (isMethod) { // set this pointer to the object
 		_writer.writePush(SEG::ARG, 0);
+		_writer.writePop(SEG::POINTER, 0);
+	}
+	else if (func_type == KEYWORD::CONSTRUCTOR) {
+		_writer.writePush(SEG::CONST, _classSymbols.varCount(KIND::FIELD));
+		_writer.writeCall("Memory.alloc", 1);
 		_writer.writePop(SEG::POINTER, 0);
 	}
 	compileStatements();
@@ -328,7 +353,8 @@ void CompileEngine::compileSubroutineCall() {
 	}
 	else { // a subroutine of the own class is called tokenizer.token should be '('
 		fullName = _className + "." + firstName;
-		if (_subroutines.find(fullName)->second.type == SUBROUTINE_TYPE::METHOD) { // the subroutine is method
+		auto a = _subroutines.find(fullName);
+		if (_subroutines.find(fullName) -> second == SUBROUTINE_TYPE::METHOD) { // the subroutine is method
 			numArgs++;
 			_writer.writePush(SEG::POINTER, 0);
 		}
@@ -382,7 +408,7 @@ void CompileEngine::compileTerm() {
 		switch (_tokenizer.keyWord()) {
 		case KEYWORD::TRUE: // push -1
 			_writer.writePush(SEG::CONST, 0);
-			_writer.writeArithmetic(CMD::NEG);
+			_writer.writeArithmetic(CMD::NOT);
 			break;
 		case KEYWORD::FALSE: //push 0
 			_writer.writePush(SEG::CONST, 0);
@@ -417,7 +443,6 @@ void CompileEngine::compileTerm() {
 
 		if (!_subroutineSymbols.isDefined(_tokenizer.identifier()) && !_classSymbols.isDefined(_tokenizer.identifier())) // subroutine
 		{
-
 			compileSubroutineCall();
 		}	
 		else // varName or varName[expression] or varName.method
@@ -465,7 +490,6 @@ void CompileEngine::compileTerm() {
 		break;
 	}
 	indent -= 2;
-
 	std::cout << std::string(indent, '-') << "</term>" << std::endl;
 }
 

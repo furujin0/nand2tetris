@@ -156,3 +156,8 @@ std::string Tokenizer::type2string() const{
 	}
 
 }
+
+void Tokenizer::reset() {
+	_ifs.clear();
+	_ifs.seekg(0, std::ios::beg);
+}

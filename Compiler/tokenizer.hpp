@@ -76,4 +76,6 @@ public:
 	bool isString(const std::string& str) const;
 
 	bool isIdentifier(const std::string& str) const;
+
+	void reset();
 };

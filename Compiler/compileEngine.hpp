@@ -12,8 +12,6 @@
 
 struct FuncInfo {
 	std::string name;
-	int numArgs;
-	int numLocals;
 	SUBROUTINE_TYPE type;
 };
 
@@ -21,7 +19,7 @@ class CompileEngine {
 	Tokenizer _tokenizer;
 	SymbolTable _classSymbols;
 	SymbolTable _subroutineSymbols;
-	std::unordered_map<std::string, FuncInfo> _subroutines;
+	std::unordered_map<std::string, SUBROUTINE_TYPE> _subroutines;
 	VmWriter _writer;
 	std::string _className;
 	std::string _subroutineName;
@@ -34,6 +32,8 @@ public:
 		const std::string& inputName,
 		const std::string& outputName
 	);
+
+	void createSubroutineTable();
 
 	void compileClass();
 
@@ -92,4 +92,5 @@ public:
 	void compileKeyword();
 
 	void kind2seg(KIND kind, SEG& seg);
+
 };

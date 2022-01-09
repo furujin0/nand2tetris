@@ -42,6 +42,7 @@ enum class KIND {
 };
 
 enum class SUBROUTINE_TYPE {
+	CONSTRUCTOR,
 	FUNCTION,
 	METHOD,
 };
