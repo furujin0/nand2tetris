@@ -38,7 +38,6 @@ void Tokenizer::advance() {
 			}
 		} while (true);
 	}
-	std::cout << _token << " (" << type2string() << ")" << std::endl;
 }
 
 Tokenizer::Tokenizer(const std::string& inputName)

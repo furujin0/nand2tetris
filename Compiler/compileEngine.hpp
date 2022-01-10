@@ -10,10 +10,6 @@
 #include "vmWriter.hpp"
 
 
-struct FuncInfo {
-	std::string name;
-	SUBROUTINE_TYPE type;
-};
 
 class CompileEngine {
 	Tokenizer _tokenizer;

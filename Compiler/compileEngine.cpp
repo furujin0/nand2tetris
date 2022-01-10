@@ -91,8 +91,6 @@ void CompileEngine::compileClassVarDec() {
 }
 
 void CompileEngine::compileSubroutine() {
-	std::cout << std::string(indent, '-') << "<subroutineDec>" << std::endl;
-	indent += 2;
 	
 	_subroutineSymbols.startSubroutine();
 	_ifCount = 0;
@@ -107,7 +105,9 @@ void CompileEngine::compileSubroutine() {
 	case KEYWORD::FUNCTION:
 		func_type = SUBROUTINE_TYPE::FUNCTION; break;
 	case KEYWORD::METHOD:
-		func_type = SUBROUTINE_TYPE::METHOD; break;
+		func_type = SUBROUTINE_TYPE::METHOD;
+		_subroutineSymbols.define("this", _className, KIND::ARG);
+		break;
 	default:
 		break;
 	}
@@ -142,15 +142,11 @@ void CompileEngine::compileSubroutine() {
 	}
 	compileStatements();
 	_tokenizer.advance(); // move from '{' to the next
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</subroutineDec>" << std::endl;
+
 }
 
 void CompileEngine::compileVarDec() {
-	std::cout << std::string(indent, '-') << "<varDec>" << std::endl;
-	indent += 2;
-	_tokenizer.advance(); //move from 'var' to type
-	
+	_tokenizer.advance(); //move from 'var' to type	
 	auto type = _tokenizer.identifier();
 
 	do {
@@ -159,14 +155,10 @@ void CompileEngine::compileVarDec() {
 		_tokenizer.advance(); // move to a separator ',' or ';'
 	} while (_tokenizer.symbol() != ';');
 	_tokenizer.advance();
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</varDec>" << std::endl;
 }
 
 
 void CompileEngine::compileParameterList() {
-	std::cout << std::string(indent, '-')<< "<parameterList>" << std::endl;
-	indent += 2;
 
 	while (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ')')
 	{
@@ -181,8 +173,6 @@ void CompileEngine::compileParameterList() {
 			_tokenizer.advance();
 		}
 	}
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</parameterList>" << std::endl;
 }
 
 
@@ -191,8 +181,6 @@ bool CompileEngine::isBuiltInType(const std::string& type) {
 }
 
 void CompileEngine::compileStatements() {
-	std::cout << std::string(indent, '-') << "<statements>" << std::endl;
-	indent += 2;
 		
 	bool hasMoreStatements = true;
 	while (hasMoreStatements) {
@@ -209,23 +197,16 @@ void CompileEngine::compileStatements() {
 			case KEYWORD::RETURN:
 				compileReturn(); break;
 			default:
-				std::cout << "No statements remain. The current token is:" << _tokenizer.token() << std::endl;
 				hasMoreStatements = false; break;
 			}
 		}
 		else {
-			std::cout << "No statements remain. The current token is:" << _tokenizer.token() << std::endl;
-
 			hasMoreStatements = false;
 		}
 	}
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</statements>" << std::endl;
 }
 
 void CompileEngine::compileLet() {
-	std::cout << std::string(indent, '-') << "<letStatement>" << std::endl;
-	indent += 2;
 	//determine varName and its kind
 	_tokenizer.advance(); // move from "let" to varName;
 	auto varName = _tokenizer.identifier();
@@ -266,15 +247,13 @@ void CompileEngine::compileLet() {
 		_writer.writePop(seg, index);
 	}
 	_tokenizer.advance();// move from ';' to the next
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</letStatement>" << std::endl;
-
 }
 
 void CompileEngine::compileIf() {
 	
-	auto false_label = "FALSE_IF" + std::to_string(_ifCount);
+	auto ifCountHere = _ifCount;
 	_ifCount++;
+	auto false_label = "FALSE_IF" + std::to_string(ifCountHere);
 	_tokenizer.advance();// move from 'if' to '('
 	_tokenizer.advance();//move from '(' to expression
 	compileExpression();
@@ -286,7 +265,7 @@ void CompileEngine::compileIf() {
 	_tokenizer.advance();//move from '}' to 'else' or the next
 
 	if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::ELSE) {
-		auto return_label = "RETURN_IF" + std::to_string(_ifCount);
+		auto return_label = "RETURN_IF" + std::to_string(ifCountHere);
 
 		_writer.writeGoto(return_label);
 		_writer.writeLabel(false_label);
@@ -302,11 +281,11 @@ void CompileEngine::compileIf() {
 }
 
 void CompileEngine::compileWhile() {
-	std::cout << std::string(indent, '-') << "<whileStatement>" << std::endl;
-	indent += 2;
-	auto whileLabel = "WHILE" + std::to_string(_whileCount);
-	auto returnLabel = "RETURN_WHILE" + std::to_string(_whileCount);
+	auto whileCountHere = _whileCount;
 	_whileCount++;
+
+	auto whileLabel = "WHILE" + std::to_string(whileCountHere);
+	auto returnLabel = "RETURN_WHILE" + std::to_string(whileCountHere);
 	_tokenizer.advance();// move from while to '('
 	_tokenizer.advance(); //move from '(' to expression
 	_writer.writeLabel(whileLabel);
@@ -319,21 +298,14 @@ void CompileEngine::compileWhile() {
 	_writer.writeGoto(whileLabel);
 	_writer.writeLabel(returnLabel);
 	_tokenizer.advance(); //move from '}'
-	indent -= 2;
-
-	std::cout << std::string(indent, '-') << "</whileStatement>" << std::endl;
 }
 
 void CompileEngine::compileDo() {
-	std::cout << std::string(indent, '-') << "<doStatement>" << std::endl;
-	indent += 2;
 
 	_tokenizer.advance();
 	compileSubroutineCall();
 	_writer.writePop(SEG::TEMP, 0);
 	_tokenizer.advance(); // move from ';'
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</doStatement>" << std::endl;
 }
 
 void CompileEngine::compileSubroutineCall() {
@@ -412,8 +384,6 @@ bool CompileEngine::isUnaryOp(char c) {
 }
 
 void CompileEngine::compileTerm() {
-	std::cout << std::string(indent, '-') << "<term>" << std::endl;
-	indent += 2;
 	switch (_tokenizer.tokenType()) {
 	case TOKEN_TYPE::INT_CONST:
 		_writer.writePush(SEG::CONST, _tokenizer.intVal());
@@ -514,13 +484,9 @@ void CompileEngine::compileTerm() {
 	default:
 		break;
 	}
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</term>" << std::endl;
 }
 
 void CompileEngine::compileExpression() {
-	std::cout << std::string(indent, '-') << "<expresion>" << std::endl;
-	indent += 2;
 
 	compileTerm();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::SYMBOL && isOp(_tokenizer.symbol())) {
@@ -551,13 +517,9 @@ void CompileEngine::compileExpression() {
 			break;
 		}
 	}
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</expression>" << std::endl;
 }
 
 int CompileEngine::compileExpressionList() {
-	std::cout << std::string(indent, '-') << "<expressionList>" << std::endl;
-	indent += 2;
 
 	int numExp = 0;
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ')') {
@@ -569,8 +531,6 @@ int CompileEngine::compileExpressionList() {
 			compileExpression();
 		}
 	}
-	indent -= 2;
-	std::cout << std::string(indent, '-') << "</expressionList>" << std::endl;
 	return numExp;
 }
 
