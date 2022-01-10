@@ -22,9 +22,9 @@ class CompileEngine {
 	std::unordered_map<std::string, SUBROUTINE_TYPE> _subroutines;
 	VmWriter _writer;
 	std::string _className;
-	std::string _subroutineName;
 	int _ifCount = 0;
 	int _whileCount = 0;
+	int _staticInitIdx = 0;
 	int indent = 0;
 
 public:
@@ -90,6 +90,8 @@ public:
 	void compileSymbol();
 
 	void compileKeyword();
+
+	void showSubroutines();
 
 	void kind2seg(KIND kind, SEG& seg);
 
