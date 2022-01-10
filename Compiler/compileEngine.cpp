@@ -44,6 +44,7 @@ void CompileEngine::compileClass() {
 
 	createSubroutineTable();
 
+
 	_tokenizer.advance(); //to class keyword
 	_tokenizer.advance(); // move to className
 	_className = _tokenizer.identifier();
@@ -51,7 +52,7 @@ void CompileEngine::compileClass() {
 
 	_tokenizer.advance(); // move from '{' to classVarDec
 
-	_staticInitIdx += _classSymbols.varCount(KIND::STATIC);
+	//_staticInitIdx += _classSymbols.varCount(KIND::STATIC);
 	_classSymbols.startSubroutine();
 	while (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD
 		&& (_tokenizer.keyWord() == KEYWORD::STATIC || _tokenizer.keyWord() == KEYWORD::FIELD))
@@ -94,6 +95,8 @@ void CompileEngine::compileSubroutine() {
 	indent += 2;
 	
 	_subroutineSymbols.startSubroutine();
+	_ifCount = 0;
+	_whileCount = 0;
 	
 	//identify function type
 	auto keyword = _tokenizer.keyWord();
@@ -270,35 +273,39 @@ void CompileEngine::compileLet() {
 
 void CompileEngine::compileIf() {
 	
-	auto false_label = _className + "_false_" + std::to_string(_ifCount);
-	auto return_label = _className + "_return_if_" + std::to_string(_ifCount);
+	auto false_label = "FALSE_IF" + std::to_string(_ifCount);
 	_ifCount++;
-	_tokenizer.advance();
-	_tokenizer.advance();
+	_tokenizer.advance();// move from 'if' to '('
+	_tokenizer.advance();//move from '(' to expression
 	compileExpression();
 	_writer.writeArithmetic(CMD::NOT);
 	_writer.writeIf(false_label);
-	_tokenizer.advance();
-	_tokenizer.advance();
+	_tokenizer.advance();//move from  ')' to  '{'
+	_tokenizer.advance();//move from '{' to statements
 	compileStatements();
-	_writer.writeGoto(return_label);
-	_tokenizer.advance();
-	_writer.writeLabel(false_label);
+	_tokenizer.advance();//move from '}' to 'else' or the next
+
 	if (_tokenizer.tokenType() == TOKEN_TYPE::KEYWORD && _tokenizer.keyWord() == KEYWORD::ELSE) {
-		_tokenizer.advance();
-		_tokenizer.advance();
-		compileStatements();
+		auto return_label = "RETURN_IF" + std::to_string(_ifCount);
+
 		_writer.writeGoto(return_label);
-		_tokenizer.advance();
+		_writer.writeLabel(false_label);
+		_tokenizer.advance(); // move 'else' to '{'
+		_tokenizer.advance(); // move to statements
+		compileStatements();
+		_tokenizer.advance(); // move to from '}' to the next
+		_writer.writeLabel(return_label);
 	}
-	_writer.writeLabel(return_label);
+	else {
+		_writer.writeLabel(false_label);
+	}
 }
 
 void CompileEngine::compileWhile() {
 	std::cout << std::string(indent, '-') << "<whileStatement>" << std::endl;
 	indent += 2;
-	auto whileLabel = _className + "_while_" + std::to_string(_whileCount);
-	auto returnLabel = _className + "_return_while_" + std::to_string(_whileCount);
+	auto whileLabel = "WHILE" + std::to_string(_whileCount);
+	auto returnLabel = "RETURN_WHILE" + std::to_string(_whileCount);
 	_whileCount++;
 	_tokenizer.advance();// move from while to '('
 	_tokenizer.advance(); //move from '(' to expression
@@ -323,6 +330,7 @@ void CompileEngine::compileDo() {
 
 	_tokenizer.advance();
 	compileSubroutineCall();
+	_writer.writePop(SEG::TEMP, 0);
 	_tokenizer.advance(); // move from ';'
 	indent -= 2;
 	std::cout << std::string(indent, '-') << "</doStatement>" << std::endl;
@@ -384,12 +392,15 @@ void CompileEngine::compileReturn() {
 	_tokenizer.advance();
 	if (_tokenizer.tokenType() != TOKEN_TYPE::SYMBOL || _tokenizer.symbol() != ';') { 
 		compileExpression();
+		_writer.writeReturn();
+		_tokenizer.advance();
 	}
 	else {
 		_writer.writePush(SEG::CONST, 0);
+		_writer.writeReturn();
+		_tokenizer.advance();
 	}
-	_writer.writeReturn();
-	_tokenizer.advance();
+
 }
 
 bool CompileEngine::isOp(char c) {
